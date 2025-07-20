@@ -1,0 +1,344 @@
+import React, { useState, useEffect } from 'react';
+import { FileText, Download, CheckCircle, Loader2, Building, Calendar, DollarSign } from 'lucide-react';
+import Button from './Button';
+import Card from './Card';
+import jsPDF from 'jspdf';
+
+interface OfferGenerationProps {
+  onComplete: (data: any) => void;
+  isProcessing: boolean;
+  hrReviewData?: any;
+  candidate?: {
+    name: string;
+    position: string;
+    department: string;
+    // add other fields as needed
+  };
+}
+
+const OfferGeneration: React.FC<OfferGenerationProps> = ({ onComplete, isProcessing, hrReviewData, candidate }) => {
+  const [offerData, setOfferData] = useState({
+    candidateName: 'Candidate Name',
+    position: 'Senior Software Engineer',
+    department: 'Engineering',
+    fixedCTC: '1200000',
+    joiningDate: '2024-03-01',
+    reportingManager: 'Sai Gopal',
+    workLocation: 'Bangalore, India',
+    probationPeriod: '6 months',
+    noticePeriod: '2 months'
+  });
+  const [pdfGenerated, setPdfGenerated] = useState(false);
+
+  useEffect(() => {
+    console.log('OfferGeneration useEffect triggered with:', { hrReviewData, candidate });
+    
+    if (hrReviewData) {
+      console.log('HR Review Data received:', hrReviewData);
+      console.log('HR Review Data type:', typeof hrReviewData);
+      console.log('HR Review Data keys:', Object.keys(hrReviewData));
+      
+      setOfferData(prev => {
+        const updatedData = {
+          ...prev,
+          candidateName: hrReviewData.candidateName || candidate?.name || prev.candidateName,
+          position: hrReviewData.candidatePosition || candidate?.position || prev.position,
+          department: hrReviewData.candidateDepartment || candidate?.department || prev.department,
+          fixedCTC: hrReviewData.fixedCTC ? hrReviewData.fixedCTC.toString() : prev.fixedCTC,
+          joiningDate: hrReviewData.joiningDate || prev.joiningDate
+        };
+        console.log('Updated offer data:', updatedData);
+        return updatedData;
+      });
+    } else if (candidate) {
+      console.log('Using candidate prop data:', candidate);
+      setOfferData(prev => ({
+        ...prev,
+        candidateName: candidate.name || prev.candidateName,
+        position: candidate.position || prev.position,
+        department: candidate.department || prev.department
+      }));
+    }
+  }, [hrReviewData, candidate]);
+
+  const generateOfferLetterPDF = () => {
+    const pdf = new jsPDF();
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    
+    // Company Header
+    pdf.setFontSize(20);
+    pdf.setTextColor(37, 99, 235);
+    pdf.text('Lloyds Technology Center', 20, 30);
+    
+    pdf.setFontSize(10);
+    pdf.setTextColor(100, 100, 100);
+    pdf.text('123 Tech Park, Electronic City, Bangalore - 560100', 20, 40);
+    pdf.text('Phone: +91-80-12345678 | Email: hr@techcorp.com', 20, 45);
+    
+    // Line separator
+    pdf.setDrawColor(200, 200, 200);
+    pdf.line(20, 55, pageWidth - 20, 55);
+    
+    // Date
+    pdf.setFontSize(10);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 60, 70);
+    
+    // Candidate Details
+    pdf.setFontSize(12);
+    pdf.text(`${offerData.candidateName}`, 20, 85);
+    pdf.setFontSize(10);
+    pdf.text('Subject: Offer of Employment', 20, 100);
+    
+    // Salutation
+    pdf.text(`Dear ${offerData.candidateName.split(' ')[0]},`, 20, 115);
+    
+    // Offer Content
+    const offerText = [
+      'We are pleased to offer you the position of ' + offerData.position + ' in our ' + offerData.department + ' department.',
+      '',
+      'The terms and conditions of your employment are as follows:',
+      '',
+      'Position: ' + offerData.position,
+      'Department: ' + offerData.department,
+      'Reporting Manager: ' + offerData.reportingManager,
+      'Work Location: ' + offerData.workLocation,
+      'Date of Joining: ' + new Date(offerData.joiningDate).toLocaleDateString(),
+      '',
+      'COMPENSATION:',
+      'Annual CTC: ₹' + (offerData.fixedCTC && !isNaN(parseInt(offerData.fixedCTC)) ? parseInt(offerData.fixedCTC).toLocaleString('en-IN') : '0'),
+      '',
+      'OTHER TERMS:',
+      'Probation Period: ' + offerData.probationPeriod,
+      'Notice Period: ' + offerData.noticePeriod,
+      '',
+      'This offer is contingent upon:',
+      '• Successful completion of background verification',
+      '• Submission of all required documents',
+      '• Medical fitness certificate',
+      '',
+      'Please confirm your acceptance by signing and returning this letter.',
+      '',
+      'We look forward to welcoming you to our team!',
+      '',
+      'Sincerely,',
+      '',
+      'Sai Gopal',
+      'HR Manager',
+      'Lloyds Technology Center'
+    ];
+    
+    let yPosition = 130;
+    offerText.forEach(line => {
+      if (yPosition > 270) {
+        pdf.addPage();
+        yPosition = 30;
+      }
+      
+      if (line.startsWith('COMPENSATION:') || line.startsWith('OTHER TERMS:')) {
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+      } else if (line.startsWith('Annual CTC:')) {
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(37, 99, 235);
+      } else {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(0, 0, 0);
+      }
+      
+      pdf.text(line, 20, yPosition);
+      yPosition += line === '' ? 5 : 8;
+    });
+    
+    // Footer
+    pdf.setFontSize(8);
+    pdf.setTextColor(150, 150, 150);
+    pdf.text('This is a computer-generated offer letter and does not require a signature.', 20, 280);
+    
+    // Save the PDF
+    pdf.save(`Offer_Letter_${offerData.candidateName.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
+    setPdfGenerated(true);
+  };
+
+  const formatCurrency = (amount: string) => {
+    if (!amount || isNaN(parseInt(amount))) {
+      return '₹0';
+    }
+    return '₹' + parseInt(amount).toLocaleString('en-IN');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileText className="w-8 h-8 text-green-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Offer Letter Generation
+        </h2>
+        <p className="text-gray-600">
+          Review and generate your official offer letter
+        </p>
+      </div>
+
+      {/* Offer Details Preview */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Offer Details</h3>
+        
+       
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <Building className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-600">Position</p>
+                <p className="font-medium text-gray-900">{offerData.position}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <Building className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-600">Department</p>
+                <p className="font-medium text-gray-900">{offerData.department}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <Calendar className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-600">Joining Date</p>
+                <p className="font-medium text-gray-900">
+                  {new Date(offerData.joiningDate).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <DollarSign className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-600">Annual CTC</p>
+                <p className="font-medium text-gray-900 text-lg text-green-600">
+                  {formatCurrency(offerData.fixedCTC)}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <Building className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-600">Work Location</p>
+                <p className="font-medium text-gray-900">{offerData.workLocation}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              <Calendar className="w-5 h-5 text-gray-400" />
+              <div>
+                <p className="text-sm text-gray-600">Probation Period</p>
+                <p className="font-medium text-gray-900">{offerData.probationPeriod}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Offer Letter Preview */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Offer Letter Preview</h3>
+        
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 max-h-96 overflow-y-auto">
+          <div className="space-y-4 text-sm">
+            <div className="text-center border-b pb-4">
+              <h4 className="text-lg font-bold text-blue-600">Lloyds Technology Center</h4>
+              <p className="text-gray-600">123 Tech Park, Electronic City, Bangalore - 560100</p>
+            </div>
+            
+            <div className="text-right">
+              <p>Date: {new Date().toLocaleDateString()}</p>
+            </div>
+            
+            <div>
+              <p className="font-medium">{offerData.candidateName}</p>
+              <p className="mt-2"><strong>Subject:</strong> Offer of Employment</p>
+            </div>
+            
+            <div>
+              <p>Dear {offerData.candidateName.split(' ')[0]},</p>
+              <p className="mt-2">
+                We are pleased to offer you the position of <strong>{offerData.position}</strong> in our <strong>{offerData.department}</strong> department.
+              </p>
+            </div>
+            
+            <div>
+              <p className="font-medium">The terms and conditions of your employment are as follows:</p>
+              <ul className="mt-2 space-y-1 ml-4">
+                <li><strong>Position:</strong> {offerData.position}</li>
+                <li><strong>Department:</strong> {offerData.department}</li>
+                <li><strong>Reporting Manager:</strong> {offerData.reportingManager}</li>
+                <li><strong>Work Location:</strong> {offerData.workLocation}</li>
+                <li><strong>Date of Joining:</strong> {new Date(offerData.joiningDate).toLocaleDateString()}</li>
+                <li><strong>Annual CTC:</strong> <span className="text-green-600 font-bold">{formatCurrency(offerData.fixedCTC)}</span></li>
+                <li><strong>Probation Period:</strong> {offerData.probationPeriod}</li>
+                <li><strong>Notice Period:</strong> {offerData.noticePeriod}</li>
+              </ul>
+            </div>
+            
+            <div>
+              <p>We look forward to welcoming you to our team!</p>
+              <p className="mt-4">Sincerely,<br />HR Team<br />Lloyds Technology Center</p>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Actions */}
+      <div className="flex justify-between items-center">
+        <div>
+          {pdfGenerated && (
+            <div className="flex items-center space-x-2 text-green-600">
+              <CheckCircle className="w-5 h-5" />
+              <span className="text-sm">Offer letter downloaded successfully!</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex space-x-3">
+          <Button
+            variant="outline"
+            onClick={generateOfferLetterPDF}
+            className="flex items-center space-x-2"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download Offer Letter</span>
+          </Button>
+          
+          <Button
+            onClick={() => onComplete({ offerData, pdfGenerated })}
+            disabled={!pdfGenerated || isProcessing}
+            className="px-8"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Accept Offer & Continue
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default OfferGeneration; 

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Lloyds Technology Center</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 40px 30px;
+        }
+        .congratulations {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .congratulations h2 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        .congratulations p {
+            margin: 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        .section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .section p {
+            margin-bottom: 15px;
+            font-size: 16px;
+            color: #555;
+        }
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 20px 0;
+            transition: transform 0.3s ease;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+        .features {
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin: 25px 0;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .feature-icon {
+            width: 20px;
+            height: 20px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+        .footer {
+            background-color: #2c3e50;
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        .footer p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .social-links {
+            margin-top: 15px;
+        }
+        .social-links a {
+            color: white;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Congratulations!</h1>
+            <p>Welcome to the Lloyds Technology Center Family</p>
+        </div>
+        
+        <div class="content">
+            <div class="congratulations">
+                <h2>🎯 Interview Success!</h2>
+                <p>You have successfully cleared all interview rounds!</p>
+            </div>
+            
+            <div class="section">
+                <h3>Dear <span th:text="${candidateName}">Candidate</span>,</h3>
+                <p>We are thrilled to inform you that you have successfully cleared all interview rounds and we are excited to welcome you to the <strong>Lloyds Technology Center</strong> team!</p>
+            </div>
+            
+            <div class="section">
+                <h3>🚀 What's Next?</h3>
+                <p>We're now ready to begin your onboarding process. This will be a smooth, digital experience designed to get you up and running quickly.</p>
+            </div>
+            
+            <div class="highlight">
+                <h4>📋 Onboarding Process</h4>
+                <p>Your onboarding journey will include:</p>
+                <ul>
+                    <li>Document upload and verification</li>
+                    <li>AI-powered form completion</li>
+                    <li>HR review and offer generation</li>
+                    <li>Background verification</li>
+                    <li>Smart forms and e-signatures</li>
+                    <li>Gamified induction program</li>
+                </ul>
+            </div>
+            
+            <div class="features">
+                <h3>✨ Why Choose Our Digital Onboarding?</h3>
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span>AI-powered document processing</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span>Real-time progress tracking</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span>Secure and compliant</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span>Mobile-friendly interface</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">✓</div>
+                    <span>24/7 support available</span>
+                </div>
+            </div>
+            
+            <div class="section" style="text-align: center;">
+                <h3>🎯 Ready to Get Started?</h3>
+                <p>Click the button below to access your personalized onboarding portal:</p>
+                <a href="http://localhost:5173/" class="cta-button">
+                    🚀 Start Your Onboarding Journey
+                </a>
+                <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                    <strong>Login URL:</strong> <a href="http://localhost:5173/" style="color: #667eea;">http://localhost:5173/</a>
+                </p>
+            </div>
+            
+            <div class="section">
+                <h3>📞 Need Help?</h3>
+                <p>If you have any questions or need assistance during the onboarding process, please don't hesitate to reach out to our HR team. We're here to support you every step of the way!</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p><strong>Lloyds Technology Center</strong></p>
+            <p>123 Tech Park, Electronic City, Bangalore - 560100</p>
+            <p>Phone: +91-80-12345678 | Email: hr@lloydstech.com</p>
+            <div class="social-links">
+                <a href="#">LinkedIn</a> |
+                <a href="#">Twitter</a> |
+                <a href="#">Website</a>
+            </div>
+            <p style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
+                This is an automated message. Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html> 
