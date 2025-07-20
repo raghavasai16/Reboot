@@ -63,7 +63,7 @@ const LoginPage: React.FC = () => {
                 style={{ maxWidth: '100%' }}
               />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome !</h1>
             <p className="text-gray-600">Sign in to continue your onboarding journey</p>
           </div>
 
@@ -145,7 +145,7 @@ const LoginPage: React.FC = () => {
             </Button>
           </form>
 
-          <div className="mt-8 text-center">
+          {/* <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
               Demo Accounts:
             </p>
@@ -153,7 +153,7 @@ const LoginPage: React.FC = () => {
               <p>Candidate: candidate@example.com / password</p>
               <p>HR Manager: hr@company.com / password</p>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

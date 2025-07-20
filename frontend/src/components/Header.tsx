@@ -34,10 +34,10 @@ const Header: React.FC = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link to="/dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">HR</span>
+              <div className="bg-green-900 rounded-lg inline-flex items-center justify-center px-3 py-1">
+                <span className="text-white font-bold text-sm">Lloyds Technology Centre</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">OnboardAI</span>
+              <span className="text-xl font-bold text-gray-900">Onboarding AI</span>
             </Link>
           </div>
 
