@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 interface User {
-  id: string;
+  id: number | string; // For candidates: numeric id from candidates table. For HR: only for profile, not onboarding actions.
   email: string;
   name: string;
   role: 'candidate' | 'hr' | 'admin';
@@ -31,23 +31,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate checking for existing session
+    // Restore user session from localStorage
     const token = localStorage.getItem('authToken');
-    const userRole = localStorage.getItem('userRole') || 'candidate';
-    if (token) {
-      // Simulate user data fetch
-      setTimeout(() => {
-        setUser({
-          id: '1',
-          email: userRole === 'hr' ? 'hr@company.com' : 'candidate@example.com',
-          name: userRole === 'hr' ? 'Sai HR Manager' : 'Veera Candidate',
-          role: userRole as 'candidate' | 'hr' | 'admin',
-        });
-        setIsLoading(false);
-      }, 1000);
-    } else {
-      setIsLoading(false);
+    const userStr = localStorage.getItem('authUser');
+    if (token && userStr) {
+      setUser(JSON.parse(userStr));
     }
+    setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -64,15 +54,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       const role = data.role;
       const name = (data.firstName || '') + ' ' + (data.lastName || '');
+      // Prefer numeric id from backend, fallback to email if not present
       const userObj: User = {
-        id: data.email,
+        id: typeof data.id === 'number' ? data.id : (data.id ? Number(data.id) : data.email),
         email: data.email,
         name: name.trim(),
         role: role,
       };
       setUser(userObj);
+      localStorage.setItem('authUser', JSON.stringify(userObj));
       localStorage.setItem('authToken', 'mock-jwt-token');
-      localStorage.setItem('userRole', role);
       return userObj;
     } finally {
       setIsLoading(false);
@@ -82,7 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('authToken');
-    localStorage.removeItem('userRole');
+    localStorage.removeItem('authUser');
   };
 
   return (

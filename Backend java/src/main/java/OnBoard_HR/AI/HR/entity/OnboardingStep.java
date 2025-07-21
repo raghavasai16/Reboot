@@ -13,6 +13,9 @@ public class OnboardingStep {
     @Column(name = "candidate_email", nullable = false)
     private String candidateEmail;
 
+    @Column(name = "candidate_id")
+    private Long candidateId;
+
     @Column(name = "step_id", nullable = false)
     private String stepId;
 
@@ -30,6 +33,8 @@ public class OnboardingStep {
     public void setId(Integer id) { this.id = id; }
     public String getCandidateEmail() { return candidateEmail; }
     public void setCandidateEmail(String candidateEmail) { this.candidateEmail = candidateEmail; }
+    public Long getCandidateId() { return candidateId; }
+    public void setCandidateId(Long candidateId) { this.candidateId = candidateId; }
     public String getStepId() { return stepId; }
     public void setStepId(String stepId) { this.stepId = stepId; }
     public String getStatus() { return status; }

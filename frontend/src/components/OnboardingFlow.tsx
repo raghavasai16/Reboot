@@ -39,9 +39,19 @@ const OnboardingFlow: React.FC = () => {
   const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // Defensive check for steps
+  if (!steps || steps.length === 0) {
+    return <div>Loading onboarding steps...</div>;
+  }
+
   const currentStepData = steps[currentStep];
+  if (!currentStepData) {
+    return <div>Invalid step. Please contact support.</div>;
+  }
+  // Calculate overall progress
   const completedSteps = steps.filter(step => step.status === 'completed').length;
-  const progressPercentage = (completedSteps / steps.length) * 100;
+  const totalSteps = steps.length;
+  const progressPercentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
   const handleStepComplete = async (stepId: string, data?: any) => {
     setIsProcessing(true);
@@ -202,16 +212,19 @@ const OnboardingFlow: React.FC = () => {
 
         {/* Progress Overview */}
         <Card className="p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Overall Progress</h2>
-            <span className="text-sm text-gray-500">
-              {completedSteps} of {steps.length} completed
-            </span>
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold text-lg">Overall Progress</span>
+              <span className="text-sm text-gray-500">{completedSteps} of {totalSteps} completed</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 mb-1">
+              <div
+                className="h-2 rounded-full bg-blue-500 transition-all duration-300"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+            <div className="text-sm text-gray-600">{progressPercentage}% complete</div>
           </div>
-          <ProgressBar progress={progressPercentage} className="mb-4" />
-          <p className="text-sm text-gray-600">
-            {Math.round(progressPercentage)}% complete
-          </p>
         </Card>
 
         {/* Step Navigation */}

@@ -7,6 +7,7 @@ public class CandidateRequest {
     private String position;
     private String department;
     private String startDate;
+    private Integer progress;
 
     // Default constructor
     public CandidateRequest() {}
@@ -69,6 +70,9 @@ public class CandidateRequest {
     public void setStartDate(String startDate) {
         this.startDate = startDate;
     }
+
+    public Integer getProgress() { return progress; }
+    public void setProgress(Integer progress) { this.progress = progress; }
 
     public String getFullName() {
         return (firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "").trim();

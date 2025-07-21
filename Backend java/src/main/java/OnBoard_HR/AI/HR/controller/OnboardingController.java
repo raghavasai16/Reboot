@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import OnBoard_HR.AI.HR.entity.Candidate;
+import OnBoard_HR.AI.HR.repository.CandidateRepository;
 
 @RestController
 @RequestMapping("/api/onboarding")
@@ -30,6 +32,9 @@ public class OnboardingController {
 
     @Autowired
     private EmailService emailService;
+
+    @Autowired
+    private CandidateRepository candidateRepository;
 
     // Get all onboarding steps for a candidate
     @GetMapping("/{candidateEmail}")
@@ -46,19 +51,60 @@ public class OnboardingController {
         return ResponseEntity.ok(new ArrayList<>(latestSteps.values()));
     }
 
+    // Add new endpoint to get steps by candidateId
+    @GetMapping("/by-id/{candidateId}")
+    public ResponseEntity<List<OnboardingStep>> getStepsByCandidateId(@PathVariable Long candidateId) {
+        List<OnboardingStep> steps = onboardingStepRepository.findByCandidateId(candidateId);
+        // Map of stepId to latest step
+        Map<String, OnboardingStep> latestSteps = new HashMap<>();
+        for (OnboardingStep step : steps) {
+            String stepId = step.getStepId();
+            if (!latestSteps.containsKey(stepId) || step.getUpdatedAt().isAfter(latestSteps.get(stepId).getUpdatedAt())) {
+                latestSteps.put(stepId, step);
+            }
+        }
+        // Define the full list of step IDs and titles (should match frontend)
+        String[][] allSteps = {
+            {"login", "Login & Password Reset"},
+            {"forms", "Adaptive Forms"},
+            {"documents", "Document Upload"},
+            {"verification", "Cross Validation"},
+            {"hr-review", "HR Review"},
+            {"offer", "Offer Generation"},
+            {"bgv", "Background Verification"},
+            {"pre-onboarding", "Pre-Onboarding"},
+            {"gamification", "Gamified Induction"}
+        };
+        List<OnboardingStep> result = new ArrayList<>();
+        for (String[] stepInfo : allSteps) {
+            String stepId = stepInfo[0];
+            String title = stepInfo[1];
+            if (latestSteps.containsKey(stepId)) {
+                result.add(latestSteps.get(stepId));
+            } else {
+                OnboardingStep pendingStep = new OnboardingStep();
+                pendingStep.setCandidateId(candidateId);
+                pendingStep.setStepId(stepId);
+                pendingStep.setStatus("pending");
+                pendingStep.setCandidateEmail(steps.isEmpty() ? null : steps.get(0).getCandidateEmail());
+                pendingStep.setData(null);
+                pendingStep.setUpdatedAt(java.time.LocalDateTime.now());
+                result.add(pendingStep);
+            }
+        }
+        return ResponseEntity.ok(result);
+    }
+
     // Update or create a step for a candidate
-    @PostMapping("/{candidateEmail}/step")
-    public ResponseEntity<Map<String, Object>> updateStep(
-            @PathVariable String candidateEmail,
-            @RequestBody Map<String, Object> payload,
-            @RequestHeader(value = "X-User-Role", required = false) String userRole // Expecting frontend to send this header
+    @PostMapping("/{candidateId}/step")
+    public ResponseEntity<Map<String, Object>> updateStepById(
+            @PathVariable Long candidateId,
+            @RequestBody Map<String, Object> payload
     ) {
         String stepId = (String) payload.get("stepId");
         String status = (String) payload.get("status");
         String data = payload.get("data") != null ? payload.get("data").toString() : null;
         Map<String, Object> response = new HashMap<>();
-
-        logger.info("Inserting onboarding step: candidateEmail={}, stepId={}, status={}, userRole={}", candidateEmail, stepId, status, userRole);
 
         if (stepId == null || status == null) {
             response.put("success", false);
@@ -66,17 +112,33 @@ public class OnboardingController {
             return ResponseEntity.badRequest().body(response);
         }
 
-        // Always insert a new record for each step completion
-        OnboardingStep step = new OnboardingStep();
-        step.setCandidateEmail(candidateEmail);
-        step.setStepId(stepId);
-        step.setStatus(status);
-        step.setData(data);
-        step.setUpdatedAt(java.time.LocalDateTime.now());
+        // Check if step exists
+        Optional<OnboardingStep> existing = onboardingStepRepository.findByCandidateIdAndStepId(candidateId, stepId);
+        OnboardingStep step;
+        if (existing.isPresent()) {
+            step = existing.get();
+            step.setStatus(status);
+            step.setData(data);
+            step.setUpdatedAt(java.time.LocalDateTime.now());
+        } else {
+            step = new OnboardingStep();
+            step.setCandidateId(candidateId);
+            step.setStepId(stepId);
+            step.setStatus(status);
+            step.setData(data);
+            step.setUpdatedAt(java.time.LocalDateTime.now());
+            // Always set candidateEmail
+            Candidate candidate = candidateRepository.findById(candidateId).orElse(null);
+            if (candidate != null) {
+                step.setCandidateEmail(candidate.getEmail());
+            } else {
+                step.setCandidateEmail("unknown@example.com");
+            }
+        }
         onboardingStepRepository.save(step);
 
         response.put("success", true);
-        response.put("message", "Step inserted successfully");
+        response.put("message", "Step updated successfully");
         return ResponseEntity.ok(response);
     }
 
@@ -127,7 +189,19 @@ public class OnboardingController {
     @PostMapping("/step-completed")
     public ResponseEntity<String> stepCompleted(@RequestBody StepCompletionRequest request) {
         try {
-            emailService.sendStepCompletionEmail(request.getEmail(), request.getStep());
+            String email = request.getEmail();
+            String step = request.getStep();
+            // If the email is actually a numeric ID, look up the real email
+            if (email != null && email.matches("^\\d+$")) {
+                Long candidateId = Long.parseLong(email);
+                Candidate candidate = candidateRepository.findById(candidateId).orElse(null);
+                if (candidate != null) {
+                    email = candidate.getEmail();
+                } else {
+                    return new ResponseEntity<>("Failed to send step completion email: candidate not found.", HttpStatus.BAD_REQUEST);
+                }
+            }
+            emailService.sendStepCompletionEmail(email, step);
             return new ResponseEntity<>("Step completion email sent successfully.", HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Failed to send step completion email.", HttpStatus.INTERNAL_SERVER_ERROR);

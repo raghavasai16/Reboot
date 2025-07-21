@@ -15,6 +15,8 @@ import OnBoard_HR.AI.HR.entity.User;
 import OnBoard_HR.AI.HR.repository.UserRepository;
 import OnBoard_HR.AI.HR.entity.OnboardingStep;
 import OnBoard_HR.AI.HR.repository.OnboardingStepRepository;
+import OnBoard_HR.AI.HR.entity.Candidate;
+import OnBoard_HR.AI.HR.repository.CandidateRepository;
 
 @RestController
 @RequestMapping("/api/candidates")
@@ -31,6 +33,9 @@ public class CandidateController {
 
     @Autowired
     private OnboardingStepRepository onboardingStepRepository;
+
+    @Autowired
+    private CandidateRepository candidateRepository;
 
     @PostMapping("/add")
     public ResponseEntity<Map<String, Object>> addCandidate(@RequestBody CandidateRequest request) {
@@ -94,12 +99,25 @@ public class CandidateController {
                 user.setRole("candidate");
                 user.setPassword((request.getFirstName() != null ? request.getFirstName() : "") + (request.getLastName() != null ? request.getLastName() : ""));
                 userRepository.save(user);
-
+                // Also save to Candidate table
+                Candidate candidate = new Candidate();
+                candidate.setFirstName(request.getFirstName());
+                candidate.setLastName(request.getLastName());
+                candidate.setEmail(request.getEmail());
+                candidate.setPosition(request.getPosition());
+                candidate.setDepartment(request.getDepartment());
+                candidate.setStartDate(request.getStartDate() != null ? java.time.LocalDate.parse(request.getStartDate()) : null);
+                candidate.setStatus("pending");
+                candidate.setProgress(request.getProgress() != null ? request.getProgress() : 0);
+                candidate.setLastActivity(java.time.LocalDateTime.now());
+                candidateRepository.save(candidate);
+                Long candidateId = candidate.getId();
                 // Initialize onboarding steps for the new candidate
-                 String[] stepIds = {"login" };
+                String[] stepIds = {"login"};
                 String[] defaultStatuses = {"completed"};
                 for (int i = 0; i < stepIds.length; i++) {
                     OnboardingStep step = new OnboardingStep();
+                    step.setCandidateId(candidateId); // Set candidateId for robust linkage
                     step.setCandidateEmail(request.getEmail());
                     step.setStepId(stepIds[i]);
                     step.setStatus(defaultStatuses[i]);
@@ -107,7 +125,6 @@ public class CandidateController {
                     step.setUpdatedAt(java.time.LocalDateTime.now());
                     onboardingStepRepository.save(step);
                 }
-                // REMOVE the onboarding steps initialization block
             }
 
 
@@ -131,6 +148,25 @@ public class CandidateController {
         }
     }
 
+    @PatchMapping("/{id}/progress")
+    public ResponseEntity<?> updateCandidateProgress(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        try {
+            Candidate candidate = candidateRepository.findById(id).orElse(null);
+            if (candidate == null) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "Candidate not found"));
+            }
+            Integer progress = (Integer) payload.get("progress");
+            String status = (String) payload.get("status");
+            if (progress != null) candidate.setProgress(progress);
+            if (status != null) candidate.setStatus(status);
+            candidate.setLastActivity(java.time.LocalDateTime.now());
+            candidateRepository.save(candidate);
+            return ResponseEntity.ok(Map.of("success", true, "candidate", candidate));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", e.getMessage()));
+        }
+    }
+
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> healthCheck() {
         logger.info("Health check requested");
@@ -138,6 +174,18 @@ public class CandidateController {
         response.put("status", "UP");
         response.put("message", "Candidate API is running");
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getAllCandidates() {
+        try {
+            return ResponseEntity.ok(candidateRepository.findAll());
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Failed to fetch candidates: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 
     @PostMapping("/test")

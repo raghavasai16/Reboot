@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { generatePDFReport } from '../utils/pdfGenerator';
 import { generateMockCandidate, generateMockActivity, generateReportData, MockCandidate } from '../utils/mockData';
-import { apiService, CandidateRequest } from '../utils/api';
+import { apiService, CandidateRequest, fetchCandidates } from '../utils/api';
+import { useOnboarding } from '../contexts/OnboardingContext';
+import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   CheckCircle, 
@@ -39,97 +41,13 @@ import ProgressBar from '../components/ProgressBar';
 const HRDashboardPage: React.FC = () => {
   const { user } = useAuth();
   const { notifications, addNotification } = useNotifications();
+  const { setSelectedCandidateId } = useOnboarding();
+  const navigate = useNavigate();
   const [selectedTab, setSelectedTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [selectedCandidate, setSelectedCandidate] = useState<MockCandidate | null>(null);
-  const [candidates, setCandidates] = useState<MockCandidate[]>([
-    {
-      id: '1',
-      name: 'Veera Raghava',
-      email: 'veera.raghava@email.com',
-      phone: '+91-90000-00001',
-      position: 'Senior Software Engineer',
-      department: 'Engineering',
-      startDate: '2024-02-15',
-      currentStep: 'Document Verification',
-      progress: 65,
-      status: 'active',
-      lastActivity: '2 hours ago',
-      documentsUploaded: 4,
-      totalDocuments: 6,
-      validationScore: 92,
-      hrNotes: 'Strong technical background, quick to respond'
-    },
-    {
-      id: '2',
-      name: 'Sai Gopal',
-      email: 'sai.gopal@email.com',
-      phone: '+91-90000-00002',
-      position: 'Product Manager',
-      department: 'Product',
-      startDate: '2024-02-20',
-      currentStep: 'HR Review',
-      progress: 80,
-      status: 'pending',
-      lastActivity: '1 day ago',
-      documentsUploaded: 6,
-      totalDocuments: 6,
-      validationScore: 88,
-      hrNotes: 'Needs salary negotiation discussion'
-    },
-    {
-      id: '3',
-      name: 'Teja Bemberi',
-      email: 'teja.bemberi@email.com',
-      phone: '+91-90000-00003',
-      position: 'UX Designer',
-      department: 'Design',
-      startDate: '2024-02-10',
-      currentStep: 'Completed',
-      progress: 100,
-      status: 'completed',
-      lastActivity: '3 days ago',
-      documentsUploaded: 6,
-      totalDocuments: 6,
-      validationScore: 96,
-      hrNotes: 'Excellent onboarding experience'
-    },
-    {
-      id: '4',
-      name: 'Priyanka Sahu',
-      email: 'priyanka.sahu@email.com',
-      phone: '+91-90000-00004',
-      position: 'Data Scientist',
-      department: 'Analytics',
-      startDate: '2024-02-25',
-      currentStep: 'Document Upload',
-      progress: 35,
-      status: 'issues',
-      lastActivity: '5 hours ago',
-      documentsUploaded: 2,
-      totalDocuments: 6,
-      validationScore: 67,
-      hrNotes: 'Document validation issues - requires follow-up'
-    },
-    {
-      id: '5',
-      name: 'Madhu Shri',
-      email: 'madhu.shri@email.com',
-      phone: '+91-90000-00005',
-      position: 'Software Engineer',
-      department: 'Engineering',
-      startDate: '2024-02-25',
-      currentStep: 'HR Review',
-      progress: 35,
-      status: 'pending',
-      lastActivity: '5 hours ago',
-      documentsUploaded: 2,
-      totalDocuments: 6,
-      validationScore: 67,
-      hrNotes: 'Document validation issues - requires follow-up'
-    },
-  ]);
+  const [candidates, setCandidates] = useState<MockCandidate[]>([]);
   const [recentActivities, setRecentActivities] = useState([
     { id: 1, candidate: 'Veera Raghava', action: 'Uploaded identity documents', time: '2 hours ago', type: 'upload' },
     { id: 2, candidate: 'Sai Gopal', action: 'Completed adaptive forms', time: '4 hours ago', type: 'form' },
@@ -160,6 +78,39 @@ const HRDashboardPage: React.FC = () => {
     };
 
     checkBackendStatus();
+  }, []);
+
+  // Fetch candidates from backend on mount
+  const loadCandidates = async () => {
+    try {
+      const backendCandidates = await fetchCandidates();
+      setCandidates(
+        backendCandidates.map((c: any) => ({
+          id: c.id,
+          name: `${c.firstName} ${c.lastName}`.trim(),
+          email: c.email,
+          position: c.position,
+          department: c.department,
+          startDate: c.startDate,
+          status: c.status,
+          lastActivity: c.lastActivity ? new Date(c.lastActivity).toLocaleString() : 'N/A',
+          progress: c.progress || 0, // Ensure progress is present
+          currentStep: c.currentStep || 'N/A',
+          validationScore: c.validationScore || 0,
+          documentsUploaded: c.documentsUploaded || 0,
+          totalDocuments: c.totalDocuments || 0,
+          hrNotes: c.hrNotes || '',
+          phone: c.phone || '',
+          // You can map other fields as needed
+        }))
+      );
+    } catch (e) {
+      // Optionally show a notification or fallback
+    }
+  };
+
+  useEffect(() => {
+    loadCandidates();
   }, []);
 
   // Action handlers
@@ -298,9 +249,26 @@ const HRDashboardPage: React.FC = () => {
     setRecentActivities(prev => [{ ...activity, id: Date.now() }, ...prev.slice(0, 9)]);
   };
 
+  // Compute department completion and active rates from backend data
+  const departmentStats = React.useMemo(() => {
+    const stats: Record<string, { total: number; completed: number; active: number }> = {};
+    candidates.forEach(c => {
+      const dept = c.department || 'Other';
+      if (!stats[dept]) stats[dept] = { total: 0, completed: 0, active: 0 };
+      stats[dept].total += 1;
+      if (c.status?.toLowerCase() === 'completed') stats[dept].completed += 1;
+      if (c.status?.toLowerCase() === 'in progress') stats[dept].active += 1;
+    });
+    return Object.entries(stats).map(([department, { total, completed, active }]) => ({
+      department,
+      completedRate: total > 0 ? Math.round((completed / total) * 100) : 0,
+      activeRate: total > 0 ? Math.round((active / total) * 100) : 0,
+    }));
+  }, [candidates]);
+
   const handleExportData = () => {
     const csvContent = [
-      ['Name', 'Email', 'Position', 'Department', 'Progress', 'Status', 'Validation Score'].join(','),
+      ['Name', 'Email', 'Position', 'Department', 'Progress', 'Status', 'Last Activity'].join(','),
       ...candidates.map(c => [
         c.name,
         c.email,
@@ -308,10 +276,10 @@ const HRDashboardPage: React.FC = () => {
         c.department,
         `${c.progress}%`,
         c.status,
-        `${c.validationScore}%`
+        c.lastActivity
       ].join(','))
     ].join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -319,7 +287,7 @@ const HRDashboardPage: React.FC = () => {
     a.download = `candidates_export_${Date.now()}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    
+
     addNotification({
       type: 'success',
       title: 'Data Exported',
@@ -341,24 +309,48 @@ const HRDashboardPage: React.FC = () => {
   };
 
   const handleGenerateReport = async (reportType: string) => {
-    try {
-      const reportData = generateReportData(reportType, user?.name || 'HR Manager');
-      await generatePDFReport(reportData);
-      
-      addNotification({
-        type: 'success',
-        title: 'Report Generated',
-        message: `${reportData.title} has been generated and downloaded.`,
+    if (reportType === 'onboarding-summary') {
+      // Onboarding Summary: All candidates
+      const csvContent = [
+        ['Name', 'Email', 'Position', 'Department', 'Status', 'Progress', 'Last Activity'].join(','),
+        ...candidates.map(c => [
+          c.name,
+          c.email,
+          c.position,
+          c.department,
+          c.status,
+          `${c.progress}%`,
+          c.lastActivity
+        ].join(','))
+      ].join('\n');
+      downloadCSV(csvContent, 'onboarding_summary');
+    } else if (reportType === 'department-analytics') {
+      // Department Analytics: Grouped stats
+      const stats: Record<string, { total: number; completed: number; inProgress: number; pending: number; issues: number }> = {};
+      candidates.forEach(c => {
+        const dept = c.department || 'Other';
+        if (!stats[dept]) stats[dept] = { total: 0, completed: 0, inProgress: 0, pending: 0, issues: 0 };
+        stats[dept].total += 1;
+        switch ((c.status || '').toLowerCase()) {
+          case 'completed': stats[dept].completed += 1; break;
+          case 'in progress': stats[dept].inProgress += 1; break;
+          case 'pending': stats[dept].pending += 1; break;
+          case 'issues': stats[dept].issues += 1; break;
+        }
       });
-      
-      const activity = generateMockActivity(user?.name || 'HR Manager', `Generated ${reportData.title}`);
-      setRecentActivities(prev => [{ ...activity, id: Date.now() }, ...prev.slice(0, 9)]);
-    } catch (error) {
-      addNotification({
-        type: 'error',
-        title: 'Report Generation Failed',
-        message: 'There was an error generating the report. Please try again.',
-      });
+      const csvContent = [
+        ['Department', 'Total', 'Completed', 'In Progress', 'Pending', 'Issues', 'Completion Rate (%)'].join(','),
+        ...Object.entries(stats).map(([dept, s]) => [
+          dept,
+          s.total,
+          s.completed,
+          s.inProgress,
+          s.pending,
+          s.issues,
+          s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0
+        ].join(','))
+      ].join('\n');
+      downloadCSV(csvContent, 'department_analytics');
     }
   };
 
@@ -373,27 +365,41 @@ const HRDashboardPage: React.FC = () => {
     setRecentActivities(prev => [{ ...activity, id: Date.now() }, ...prev.slice(0, 9)]);
   };
 
-  const handleApproveStep = (candidate: MockCandidate) => {
-    setCandidates(prev => prev.map(c => 
-      c.id === candidate.id 
-        ? { ...c, progress: Math.min(100, c.progress + 15), lastActivity: 'Just now' }
-        : c
-    ));
-    
-    addNotification({
-      type: 'success',
-      title: 'Step Approved',
-      message: `${candidate.name}'s current step has been approved.`,
-    });
-    
-    const activity = generateMockActivity(candidate.name, 'Step approved by HR');
-    setRecentActivities(prev => [{ ...activity, id: Date.now() }, ...prev.slice(0, 9)]);
+  const handleApproveStep = async (candidate: MockCandidate) => {
+    const newProgress = Math.min(100, candidate.progress + 15);
+    const newStatus = 'active'; // Assuming approval means active
+
+    try {
+      await apiService.updateCandidateProgress(Number(candidate.id), { progress: newProgress, status: newStatus });
+      await loadCandidates(); // Reload candidates to reflect changes
+      addNotification({
+        type: 'success',
+        title: 'Step Approved',
+        message: `${candidate.name}'s current step has been approved.`,
+      });
+      
+      const activity = generateMockActivity(candidate.name, 'Step approved by HR');
+      setRecentActivities(prev => [{ ...activity, id: Date.now() }, ...prev.slice(0, 9)]);
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Failed to Approve Step',
+        message: 'There was an error a  pproving the step. Please try again.',
+      });
+      console.error('Error approving step:', error);
+    }
   };
+
+  // Compute stats from backend candidates
+  const activeCount = candidates.filter(c => c.status?.toLowerCase() === 'in progress').length;
+  const completedCount = candidates.filter(c => c.status?.toLowerCase() === 'completed').length;
+  const pendingCount = candidates.filter(c => c.status?.toLowerCase() === 'pending').length;
+  const issuesCount = candidates.filter(c => c.status?.toLowerCase() === 'issues').length;
 
   const stats = [
     {
       label: 'Active Candidates',
-      value: candidates.filter(c => c.status === 'active').length,
+      value: activeCount,
       icon: Users,
       color: 'text-blue-600',
       bg: 'bg-blue-50',
@@ -402,7 +408,7 @@ const HRDashboardPage: React.FC = () => {
     },
     {
       label: 'Completed This Week',
-      value: candidates.filter(c => c.status === 'completed').length,
+      value: completedCount,
       icon: CheckCircle,
       color: 'text-green-600',
       bg: 'bg-green-50',
@@ -411,7 +417,7 @@ const HRDashboardPage: React.FC = () => {
     },
     {
       label: 'Pending Review',
-      value: candidates.filter(c => c.status === 'pending').length,
+      value: pendingCount,
       icon: Clock,
       color: 'text-yellow-600',
       bg: 'bg-yellow-50',
@@ -420,7 +426,7 @@ const HRDashboardPage: React.FC = () => {
     },
     {
       label: 'Issues Requiring Attention',
-      value: candidates.filter(c => c.status === 'issues').length,
+      value: issuesCount,
       icon: AlertCircle,
       color: 'text-red-600',
       bg: 'bg-red-50',
@@ -429,26 +435,33 @@ const HRDashboardPage: React.FC = () => {
     },
   ];
 
+  // Update getStatusColor for new color scheme
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case 'completed':
-        return 'text-green-600 bg-green-100';
-      case 'active':
-        return 'text-blue-600 bg-blue-100';
+        return 'bg-green-100 text-green-800';
       case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
+        return 'bg-yellow-100 text-yellow-800';
+      case 'in progress':
+        return 'bg-red-100 text-red-800';
       case 'issues':
-        return 'text-red-600 bg-red-100';
+        return 'bg-orange-100 text-orange-800';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
+  const getProgressColor = (progress: number) => {
+    if (progress === 100) return 'bg-green-500';
+    if (progress >= 90) return 'bg-yellow-500';
+    if (progress < 40) return 'bg-red-500';
+    return 'bg-blue-500';
+  };
+
+  // In filter logic, make status comparison case-insensitive
   const filteredCandidates = candidates.filter(candidate => {
-    const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         candidate.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         candidate.position.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === 'all' || candidate.status === filterStatus;
+    const matchesSearch = candidate.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterStatus === 'all' || candidate.status?.toLowerCase() === filterStatus.toLowerCase();
     return matchesSearch && matchesFilter;
   });
 
@@ -639,11 +652,11 @@ const HRDashboardPage: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="w-16 mr-2">
-                        <ProgressBar progress={candidate.progress} />
+                        <ProgressBar progress={candidate.progress} className={getProgressColor(candidate.progress)} />
                       </div>
                       <span className="text-sm text-gray-600">{candidate.progress}%</span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-1">{candidate.currentStep}</div>
+                    {/* Remove N/A or render only if you have a value to show */}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(candidate.status)}`}>
@@ -675,10 +688,9 @@ const HRDashboardPage: React.FC = () => {
                       <button 
                         className="text-green-600 hover:text-green-900"
                         onClick={() => {
-                          // Set the selected candidate and navigate to onboarding
-                          (window as any).selectedCandidate = candidate;
-                          (window as any).selectedCandidateEmail = candidate.email;
-                          window.location.href = '/onboarding';
+                          setSelectedCandidateId(Number(candidate.id));
+                          localStorage.setItem('selectedCandidateId', candidate.id.toString());
+                          navigate('/onboarding');
                         }}
                         title="Start Onboarding"
                       >
@@ -704,18 +716,14 @@ const HRDashboardPage: React.FC = () => {
         <Card className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Onboarding Completion Rate</h3>
           <div className="space-y-4">
-            {[
-              { department: 'Engineering', completed: 85, total: 100 },
-              { department: 'Product', completed: 92, total: 100 },
-              { department: 'Design', completed: 78, total: 100 },
-              { department: 'Sales', completed: 88, total: 100 },
-            ].map((dept, index) => (
-              <div key={index}>
+            {departmentStats.map(({ department, completedRate, activeRate }) => (
+              <div key={department} className="mb-2">
                 <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">{dept.department}</span>
-                  <span className="text-gray-900">{dept.completed}%</span>
+                  <span className="text-gray-600">{department}</span>
+                  <span className="text-gray-900">{completedRate}% Completed / {activeRate}% Active</span>
                 </div>
-                <ProgressBar progress={dept.completed} />
+                <ProgressBar progress={completedRate} className="bg-green-500" />
+                <ProgressBar progress={activeRate} className="bg-blue-500 mt-1" />
               </div>
             ))}
           </div>
@@ -794,6 +802,21 @@ const HRDashboardPage: React.FC = () => {
     };
     return typeMap[title] || 'onboarding-summary';
   };
+
+  function downloadCSV(csvContent: string, baseName: string) {
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${baseName}_${Date.now()}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    addNotification({
+      type: 'success',
+      title: 'Report Generated',
+      message: `The ${baseName.replace('_', ' ')} report has been downloaded.`,
+    });
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pt-16">
@@ -975,8 +998,9 @@ const HRDashboardPage: React.FC = () => {
                   <Button 
                     variant="outline"
                     onClick={() => {
-                      // Navigate to onboarding flow for this candidate
-                      window.location.href = '/onboarding';
+                      setSelectedCandidateId(Number(selectedCandidate.id));
+                      localStorage.setItem('selectedCandidateId', selectedCandidate.id.toString());
+                      navigate('/onboarding');
                     }}
                   >
                     <UserCheck className="w-4 h-4 mr-2" />

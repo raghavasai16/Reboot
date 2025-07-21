@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface OnboardingStepRepository extends JpaRepository<OnboardingStep, Integer> {
     List<OnboardingStep> findByCandidateEmail(String candidateEmail);
     Optional<OnboardingStep> findByCandidateEmailAndStepId(String candidateEmail, String stepId);
+    List<OnboardingStep> findByCandidateId(Long candidateId);
+    Optional<OnboardingStep> findByCandidateIdAndStepId(Long candidateId, String stepId);
 } 

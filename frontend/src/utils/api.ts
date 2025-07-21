@@ -165,5 +165,60 @@ export const apiService = {
       console.error('Error updating onboarding step:', error);
       throw error;
     }
+  },
+
+  async updateCandidateProgress(id: number, data: { progress?: number; status?: string }) {
+    try {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/candidates/${id}/progress`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }, 10000);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating candidate progress:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out for candidate progress update.');
+      }
+      throw error;
+    }
   }
+};
+
+export const fetchCandidates = async () => {
+  const response = await fetch('http://localhost:8080/api/candidates');
+  if (!response.ok) throw new Error('Failed to fetch candidates');
+  return response.json();
+};
+
+export const updateCandidateProgress = async (id: number, data: { progress?: number; status?: string }) => {
+  const response = await fetch(`${API_BASE_URL}/candidates/${id}/progress`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Failed to update candidate progress');
+  return response.json();
+}; 
+
+export const fetchOnboardingStepsById = async (candidateId: number) => {
+  const response = await fetch(`${API_BASE_URL}/onboarding/by-id/${candidateId}`);
+  if (!response.ok) throw new Error('Failed to fetch onboarding steps');
+  return response.json();
+};
+
+export const updateOnboardingStepById = async (candidateId: number, stepId: string, status: string, data?: any) => {
+  const response = await fetch(`${API_BASE_URL}/onboarding/${candidateId}/step`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stepId, status, data }),
+  });
+  if (!response.ok) throw new Error('Failed to update onboarding step');
+  return response.json();
 }; 

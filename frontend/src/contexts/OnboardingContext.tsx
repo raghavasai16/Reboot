@@ -3,7 +3,9 @@ import { useNotifications } from './NotificationContext';
 import { useAuth } from './AuthContext';
 import { generateMockActivity, generateMockDocument, mockDocumentNames } from '../utils/mockData';
 import { 
-    apiService
+    apiService,
+    fetchOnboardingStepsById,
+    updateOnboardingStepById
 } from '../utils/api';
 
 export interface OnboardingStep {
@@ -17,12 +19,15 @@ export interface OnboardingStep {
 interface OnboardingContextType {
   currentStep: number;
   steps: OnboardingStep[];
-  updateStepStatus: (stepId: string, status: OnboardingStep['status'], data?: any, candidateEmailOverride?: string) => void;
+  updateStepStatus: (stepId: string, newStatus: OnboardingStep['status'], stepData?: any, candidateEmailOverride?: string) => Promise<void>;
   nextStep: () => void;
   previousStep: () => void;
   resetOnboarding: () => void;
   simulateStepCompletion: (stepId: string) => void;
   simulateDocumentUpload: () => void;
+  selectedCandidateId: number | null;
+  setSelectedCandidateId: (id: number | null) => void;
+  fetchSteps: () => Promise<void>;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | undefined>(undefined);
@@ -150,33 +155,59 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [currentStep, setCurrentStep] = useState(1);
   const [steps, setSteps] = useState<OnboardingStep[]>(initialSteps);
   const { addNotification } = useNotifications();
+  const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
+
+  // On mount, load selectedCandidateId from localStorage if present
+  useEffect(() => {
+    const storedId = localStorage.getItem('selectedCandidateId');
+    if (storedId && !isNaN(Number(storedId))) {
+      setSelectedCandidateId(Number(storedId));
+    }
+  }, []);
+
+  // Helper to get the correct candidate ID for all API calls
+  const getCandidateId = () => {
+    const id = selectedCandidateId ?? user?.id;
+    if (!id || isNaN(Number(id))) {
+      console.error('Invalid candidate ID:', id, 'selectedCandidateId:', selectedCandidateId, 'user?.id:', user?.id);
+      return undefined;
+    }
+    return Number(id);
+  };
 
   // Fetch onboarding steps from backend
-  const fetchSteps = async () => {
-    if (!user?.email) return;
+  const fetchSteps = useCallback(async () => {
+    const id = getCandidateId();
+    if (!id) {
+      // Optionally, redirect to dashboard or show a message
+      return;
+    }
     try {
-      const res = await fetch(`http://localhost:8080/api/onboarding/${encodeURIComponent(user.email)}`);
-      if (res.ok) {
-        const backendSteps = await res.json();
-        // Map backend steps to UI steps
-        setSteps(prev => prev.map(step => {
-          const backendStep = backendSteps.find((s: any) => s.stepId === step.id);
-          if (backendStep) {
-            const parsedData = parseBackendData(backendStep.data);
-            return { ...step, status: backendStep.status, data: parsedData };
-          }
-          return step;
-        }));
-      }
+      const backendSteps = await fetchOnboardingStepsById(id);
+      setSteps(prev => prev.map(step => {
+        const backendStep = backendSteps.find((s: any) => s.stepId === step.id);
+        if (backendStep) {
+          const parsedData = parseBackendData(backendStep.data);
+          return { ...step, status: backendStep.status, data: parsedData };
+        }
+        return step;
+      }));
+      // Find the first incomplete step
+      const mappedStatuses = initialSteps.map(step => {
+        const backendStep = backendSteps.find((s: any) => s.stepId === step.id);
+        return backendStep ? backendStep.status : step.status;
+      });
+      const firstIncomplete = mappedStatuses.findIndex(status => status !== 'completed');
+      setCurrentStep(firstIncomplete === -1 ? 0 : firstIncomplete);
     } catch (e) {
       // fallback to initialSteps
     }
-  };
+  }, [selectedCandidateId, user]);
 
   // Fetch onboarding steps on mount or when user changes
   useEffect(() => {
     fetchSteps();
-  }, [user]);
+  }, [user, fetchSteps]);
 
   // Listen for login/logout or user role changes in other tabs
   useEffect(() => {
@@ -187,38 +218,31 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, [user]);
+  }, [user, fetchSteps]);
 
   const updateStepStatus = useCallback(async (stepId: string, newStatus: OnboardingStep['status'], stepData?: any, candidateEmailOverride?: string) => {
-    const email = candidateEmailOverride || user?.email;
-
-    if (!email) {
+    const id = getCandidateId();
+    if (!id) {
       console.error("No email found for updating step status.");
       return;
     }
 
     try {
-      // This function needs to be added to api.ts
-      const response = await apiService.updateOnboardingStep(email, stepId, newStatus, stepData);
+      await updateOnboardingStepById(id, stepId, newStatus, stepData);
+      // Re-fetch steps from backend to get the latest status
+      await fetchSteps();
       
-      // For now, let's assume the update is successful for the UI
-      setSteps(prevSteps =>
-        prevSteps.map(step =>
-          step.id === stepId ? { ...step, status: newStatus, data: stepData } : step
-        )
-      );
-
       if (newStatus === 'completed') {
         try {
-          await apiService.sendStepCompletionEmail(email, stepId);
+          await apiService.sendStepCompletionEmail(String(id), stepId);
         } catch (emailError) {
           console.error('Failed to send step completion email:', emailError);
         }
       }
     } catch (error) {
-      console.error("Failed to update step status:", error);
+      console.error('Failed to update step status:', error);
     }
-  }, [user, setSteps]);
+  }, [selectedCandidateId, user, fetchSteps]);
 
   const nextStep = useCallback(() => {
     if (currentStep < steps.length - 1) {
@@ -258,6 +282,9 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     });
   }, [addNotification]);
 
+  const completedSteps = steps.filter(step => step.status === 'completed').length;
+  const progressPercentage = (completedSteps / steps.length) * 100;
+
   return (
     <OnboardingContext.Provider value={{
       currentStep,
@@ -267,7 +294,10 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       previousStep,
       resetOnboarding,
       simulateStepCompletion,
-      simulateDocumentUpload
+      simulateDocumentUpload,
+      selectedCandidateId,
+      setSelectedCandidateId,
+      fetchSteps,
     }}>
       {children}
     </OnboardingContext.Provider>
