@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { useNotifications } from './NotificationContext';
 import { useAuth } from './AuthContext';
 import { generateMockActivity, generateMockDocument, mockDocumentNames } from '../utils/mockData';
+import { 
+    apiService
+} from '../utils/api';
 
 export interface OnboardingStep {
   id: string;
@@ -186,57 +189,36 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return () => window.removeEventListener('storage', handleStorage);
   }, [user]);
 
-  const updateStepStatus = useCallback((stepId: string, status: OnboardingStep['status'], data?: any, candidateEmailOverride?: string) => {
-    // Use candidateEmailOverride for HR actions, otherwise use logged-in user
+  const updateStepStatus = useCallback(async (stepId: string, newStatus: OnboardingStep['status'], stepData?: any, candidateEmailOverride?: string) => {
     const email = candidateEmailOverride || user?.email;
-    setSteps(prev => prev.map(step => 
-      step.id === stepId ? { ...step, status, data } : step
-    ));
 
-    // Update backend
-    if (email) {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (user && user.role === 'hr' && candidateEmailOverride) {
-        headers['X-User-Role'] = 'hr';
+    if (!email) {
+      console.error("No email found for updating step status.");
+      return;
+    }
+
+    try {
+      // This function needs to be added to api.ts
+      const response = await apiService.updateOnboardingStep(email, stepId, newStatus, stepData);
+      
+      // For now, let's assume the update is successful for the UI
+      setSteps(prevSteps =>
+        prevSteps.map(step =>
+          step.id === stepId ? { ...step, status: newStatus, data: stepData } : step
+        )
+      );
+
+      if (newStatus === 'completed') {
+        try {
+          await apiService.sendStepCompletionEmail(email, stepId);
+        } catch (emailError) {
+          console.error('Failed to send step completion email:', emailError);
+        }
       }
-      fetch(`http://localhost:8080/api/onboarding/${encodeURIComponent(email)}/step`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ stepId, status, data })
-      }).then(() => {
-        // After backend update, re-fetch steps for the correct user/candidate
-        fetch(`http://localhost:8080/api/onboarding/${encodeURIComponent(email)}`)
-          .then(res => res.ok ? res.json() : null)
-          .then(backendSteps => {
-            if (backendSteps) {
-              setSteps(prev => prev.map(step => {
-                const backendStep = backendSteps.find((s: any) => s.stepId === step.id);
-                if (backendStep) {
-                  // Parse the data field using the helper function
-                  const parsedData = parseBackendData(backendStep.data);
-                  return { ...step, status: backendStep.status, data: parsedData };
-                }
-                return step;
-              }));
-            }
-          });
-      });
+    } catch (error) {
+      console.error("Failed to update step status:", error);
     }
-
-    if (status === 'completed') {
-      addNotification({
-        type: 'success',
-        title: 'Step Completed',
-        message: `${steps.find(s => s.id === stepId)?.title} has been completed successfully.`,
-      });
-    } else if (status === 'failed') {
-      addNotification({
-        type: 'error',
-        title: 'Step Failed',
-        message: `${steps.find(s => s.id === stepId)?.title} encountered an error.`,
-      });
-    }
-  }, [steps, addNotification, user]);
+  }, [user, setSteps]);
 
   const nextStep = useCallback(() => {
     if (currentStep < steps.length - 1) {

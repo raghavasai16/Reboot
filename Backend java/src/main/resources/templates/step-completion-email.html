@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Onboarding Step Completed</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .header {
+            background-color: #f4f4f4;
+            padding: 10px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            background-color: #2c3e50;
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        .footer p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Onboarding Progress Update</h2>
+        </div>
+        <div class="content">
+            <p style="font-weight: bold; color: #ADFF2F;">Dear <span  style="font-weight: bold; color: #ADFF2F;" th:text="${name}">Candidate,</span></p>
+            <p>Congratulations! You have successfully completed the following step in your onboarding process:</p>
+            <h3 th:text="${step}">[Step Name]</h3>
+            <p>We will notify you about the next steps soon. Thank you for your cooperation.</p>
+            <p>Best regards,<br/>The HR Team</p>
+        </div>
+        <div class="footer">
+            <p><strong>Lloyds Technology Center</strong></p>
+            <p>Knowledge Park,Octave Building,Sattvapur,Hyderabad</p>
+            <p>Phone: +91-80-12345678 | Email: hr@lloydstech.com</p>
+            <div class="social-links">
+                <a href="#">LinkedIn</a> |
+                <a href="#">Twitter</a> |
+                <a href="#">Website</a>
+            </div>
+            <p style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
+                This is an automated message. Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

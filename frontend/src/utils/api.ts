@@ -87,5 +87,83 @@ export const apiService = {
       console.error('Health check failed:', error);
       throw error;
     }
+  },
+
+  async sendOnboardingEmail(email: string, name: string): Promise<any> {
+    try {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/onboarding/add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, name }),
+      }, 10000); // 10 second timeout
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Error sending onboarding email response:', errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Onboarding email sent successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error sending onboarding email:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out for onboarding email.');
+      }
+      throw error;
+    }
+  },
+
+  async sendStepCompletionEmail(email: string, step: string): Promise<any> {
+    try {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/onboarding/step-completed`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, step }),
+      }, 10000); // 10 second timeout
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        console.error('Error sending step completion email response:', errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Step completion email sent successfully:', result);
+      return result;
+    } catch (error) {
+      console.error('Error sending step completion email:', error);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out for step completion email.');
+      }
+      throw error;
+    }
+  },
+
+  async updateOnboardingStep(email: string, stepId: string, status: string, data?: any): Promise<any> {
+    try {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/onboarding/${email}/step`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ stepId, status, data }),
+      }, 10000);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error updating onboarding step:', error);
+      throw error;
+    }
   }
 }; 
