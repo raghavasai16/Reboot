@@ -112,7 +112,7 @@ public class EmailService {
             MimeMessageHelper helper = getMimeMessageHelper(candidateEmail, step, message);
 
             Context context = new Context();
-            context.setVariable("step", step.substring(0).toUpperCase()+step.substring(1));
+            context.setVariable("step", step.substring(0,1).toUpperCase()+step.substring(1));
             String name[]=candidateEmail.split("@");
             context.setVariable("name",name[0].toUpperCase());
             String htmlContent = templateEngine.process("step-completion-email", context);
@@ -139,7 +139,7 @@ public class EmailService {
         });
 
         helper.setTo(candidateEmail);
-        helper.setSubject("Onboarding Step Completed: " + step.substring(0).toUpperCase()+ step.substring(1));
+        helper.setSubject("Onboarding Step Completed: " + step.substring(0,1).toUpperCase()+ step.substring(1));
         return helper;
     }
 } 

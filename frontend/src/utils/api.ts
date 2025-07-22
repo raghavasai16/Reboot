@@ -222,3 +222,33 @@ export const updateOnboardingStepById = async (candidateId: number, stepId: stri
   if (!response.ok) throw new Error('Failed to update onboarding step');
   return response.json();
 }; 
+
+// Notification API integration
+export const fetchNotifications = async (userEmail: string) => {
+  const response = await fetch(`${API_BASE_URL}/notifications/${encodeURIComponent(userEmail)}`);
+  if (!response.ok) throw new Error('Failed to fetch notifications');
+  return response.json();
+};
+
+export const createNotification = async (notification: {
+  userEmail: string;
+  type: string;
+  title: string;
+  message: string;
+}) => {
+  const response = await fetch(`${API_BASE_URL}/notifications`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(notification),
+  });
+  if (!response.ok) throw new Error('Failed to create notification');
+  return response.json();
+};
+
+export const markNotificationAsRead = async (id: string | number) => {
+  const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+    method: 'PATCH',
+  });
+  if (!response.ok) throw new Error('Failed to mark notification as read');
+  return response.json();
+}; 

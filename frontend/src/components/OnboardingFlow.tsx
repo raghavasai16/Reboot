@@ -70,12 +70,15 @@ const OnboardingFlow: React.FC = () => {
     }
     await new Promise(resolve => setTimeout(resolve, 2000));
     updateStepStatus(stepId, 'completed', data, candidateEmail);
-    addNotification({
+    await addNotification({
       type: 'success',
       title: 'Step Completed!',
       message: `${currentStepData.title} has been completed successfully.`,
     });
-    nextStep();
+    // Only auto-advance if not gamification
+    if (stepId !== 'gamification') {
+      nextStep();
+    }
     setIsProcessing(false);
   };
 
@@ -144,7 +147,7 @@ const OnboardingFlow: React.FC = () => {
       case 'gamification':
         return (
           <GamifiedInduction
-            onComplete={(data) => handleStepComplete('gamification', data)}
+            onComplete={() => handleStepComplete('gamification')}
             isProcessing={isProcessing}
           />
         );

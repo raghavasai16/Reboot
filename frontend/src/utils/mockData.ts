@@ -38,7 +38,7 @@ export const generateMockCandidate = (): MockCandidate => {
   return {
     id: uuidv4(),
     name: `${firstName} ${lastName}`,
-    email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@company.com`,
+    email: `${firstName.toLowerCase()}.${lastName.toLowerCase()}@gmail.com`,
     phone: `+1-555-${Math.floor(Math.random() * 9000) + 1000}`,
     position,
     department,

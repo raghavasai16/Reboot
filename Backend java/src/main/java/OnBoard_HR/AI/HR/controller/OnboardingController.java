@@ -137,6 +137,28 @@ public class OnboardingController {
         }
         onboardingStepRepository.save(step);
 
+        // Update candidate progress after step update
+        Candidate candidate = candidateRepository.findById(candidateId).orElse(null);
+        if (candidate != null) {
+            // List of all required step IDs (should match frontend)
+            String[] allStepIds = {
+                "login", "forms", "documents", "verification", "hr-review",
+                "offer", "bgv", "pre-onboarding", "gamification"
+            };
+            List<OnboardingStep> allSteps = onboardingStepRepository.findByCandidateId(candidateId);
+            long completed = java.util.Arrays.stream(allStepIds)
+                .filter(requiredStepId -> allSteps.stream()
+                    .anyMatch(s -> requiredStepId.equals(s.getStepId()) && "completed".equalsIgnoreCase(s.getStatus())))
+                .count();
+            long total = allStepIds.length;
+            if (total > 0) {
+                int progress = (int) Math.round((completed * 100.0) / total);
+                candidate.setProgress(progress);
+                candidate.setLastActivity(java.time.LocalDateTime.now());
+                candidateRepository.save(candidate);
+            }
+        }
+
         response.put("success", true);
         response.put("message", "Step updated successfully");
         return ResponseEntity.ok(response);
@@ -191,6 +213,21 @@ public class OnboardingController {
         try {
             String email = request.getEmail();
             String step = request.getStep();
+            if(step.equalsIgnoreCase("forms"))
+            {
+                Long candidateId = Long.parseLong(email);
+                Candidate candidate = candidateRepository.findById(candidateId).orElse(null);
+                candidate.setStatus("active");
+                candidateRepository.save(candidate);
+            }
+            if(step.equalsIgnoreCase("gamification"))
+            {
+                Long candidateId = Long.parseLong(email);
+                Candidate candidate = candidateRepository.findById(candidateId).orElse(null);
+                candidate.setStatus("completed");
+                candidateRepository.save(candidate);
+            }
+
             // If the email is actually a numeric ID, look up the real email
             if (email != null && email.matches("^\\d+$")) {
                 Long candidateId = Long.parseLong(email);
@@ -206,5 +243,6 @@ public class OnboardingController {
         } catch (Exception e) {
             return new ResponseEntity<>("Failed to send step completion email.", HttpStatus.INTERNAL_SERVER_ERROR);
         }
+
     }
 } 

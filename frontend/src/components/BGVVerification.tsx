@@ -27,15 +27,13 @@ const BGVVerification: React.FC<BGVVerificationProps> = ({ onComplete, isProcess
       { name: 'Reference Check', status: 'pending', completedAt: '' }
     ]
   });
-
+  const [allChecksCompleted, setAllChecksCompleted] = useState(false);
   const isHR = user?.role === 'hr';
 
   const triggerBGVAPI = async () => {
     if (!isHR) return;
-
     setBgvStatus('initiated');
     const referenceId = `HR-${Date.now()}`;
-    
     setBgvData(prev => ({
       ...prev,
       referenceId,
@@ -43,12 +41,8 @@ const BGVVerification: React.FC<BGVVerificationProps> = ({ onComplete, isProcess
       initiatedAt: new Date().toISOString(),
       status: 'In Progress'
     }));
-
-    // Simulate API call to HireRight
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
     setBgvStatus('in-progress');
-
     // Simulate progressive completion of checks
     const checks = [...bgvData.checks];
     for (let i = 0; i < checks.length; i++) {
@@ -58,20 +52,36 @@ const BGVVerification: React.FC<BGVVerificationProps> = ({ onComplete, isProcess
         status: 'completed',
         completedAt: new Date().toISOString()
       };
-      
       setBgvData(prev => ({
         ...prev,
         checks: [...checks]
       }));
     }
-
-    // Complete BGV
     setBgvStatus('completed');
     setBgvData(prev => ({
       ...prev,
       status: 'Completed',
       completedAt: new Date().toISOString()
     }));
+  };
+
+  // New: Fetch all checks as completed (demo)
+  const fetchAllChecksCompleted = async () => {
+    const res = await fetch('http://localhost:8080/api/bgv/checks');
+    if (res.ok) {
+      const checks = await res.json();
+      setBgvData(prev => ({
+        ...prev,
+        checks: checks.map((c: any) => ({
+          name: c.checkName,
+          status: c.status,
+          completedAt: c.completedAt
+        })),
+        status: 'Completed',
+        completedAt: new Date().toISOString()
+      }));
+      setAllChecksCompleted(true);
+    }
   };
 
   const getStatusIcon = (status: string) => {

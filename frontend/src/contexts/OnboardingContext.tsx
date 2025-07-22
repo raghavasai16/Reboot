@@ -5,8 +5,11 @@ import { generateMockActivity, generateMockDocument, mockDocumentNames } from '.
 import { 
     apiService,
     fetchOnboardingStepsById,
-    updateOnboardingStepById
+    updateOnboardingStepById,
+    createNotification,
+    fetchCandidates
 } from '../utils/api';
+import { Notification } from './NotificationContext';
 
 export interface OnboardingStep {
   id: string;
@@ -157,29 +160,44 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const { addNotification } = useNotifications();
   const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null);
 
-  // On mount, load selectedCandidateId from localStorage if present
+  // On mount, load selectedCandidateId from localStorage if present and keep in sync
   useEffect(() => {
     const storedId = localStorage.getItem('selectedCandidateId');
     if (storedId && !isNaN(Number(storedId))) {
       setSelectedCandidateId(Number(storedId));
+      console.log('Loaded selectedCandidateId from localStorage:', storedId);
+    } else {
+      setSelectedCandidateId(null);
+      console.log('No valid selectedCandidateId in localStorage');
     }
   }, []);
 
   // Helper to get the correct candidate ID for all API calls
   const getCandidateId = () => {
-    const id = selectedCandidateId ?? user?.id;
-    if (!id || isNaN(Number(id))) {
-      console.error('Invalid candidate ID:', id, 'selectedCandidateId:', selectedCandidateId, 'user?.id:', user?.id);
+    if (user?.role === 'hr') {
+      console.log('selectedCandidateId (state):', selectedCandidateId, typeof selectedCandidateId);
+      if (selectedCandidateId && !isNaN(Number(selectedCandidateId))) {
+        return Number(selectedCandidateId);
+      }
+      console.error('HR must select a candidate. selectedCandidateId:', selectedCandidateId);
       return undefined;
     }
-    return Number(id);
+    if (user?.role === 'candidate') {
+      if (user.id && !isNaN(Number(user.id))) {
+        return Number(user.id);
+      }
+      console.error('Candidate user.id is invalid:', user?.id);
+      return undefined;
+    }
+    console.error('Invalid user role or missing candidate ID:', user?.role, user?.id, selectedCandidateId);
+    return undefined;
   };
 
   // Fetch onboarding steps from backend
   const fetchSteps = useCallback(async () => {
     const id = getCandidateId();
     if (!id) {
-      // Optionally, redirect to dashboard or show a message
+      // Do not fetch if no valid candidate ID
       return;
     }
     try {
@@ -198,7 +216,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         return backendStep ? backendStep.status : step.status;
       });
       const firstIncomplete = mappedStatuses.findIndex(status => status !== 'completed');
-      setCurrentStep(firstIncomplete === -1 ? 0 : firstIncomplete);
+      setCurrentStep(firstIncomplete === -1 ? steps.length - 1 : firstIncomplete);
     } catch (e) {
       // fallback to initialSteps
     }
@@ -206,8 +224,10 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Fetch onboarding steps on mount or when user changes
   useEffect(() => {
+    const id = getCandidateId();
+    if (!id) return;
     fetchSteps();
-  }, [user, fetchSteps]);
+  }, [user, selectedCandidateId, fetchSteps]);
 
   // Listen for login/logout or user role changes in other tabs
   useEffect(() => {
@@ -231,7 +251,19 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       await updateOnboardingStepById(id, stepId, newStatus, stepData);
       // Re-fetch steps from backend to get the latest status
       await fetchSteps();
-      
+      // Fetch updated candidate progress and update UI if needed
+      try {
+        const candidates = await fetchCandidates();
+        const updated = candidates.find((c: any) => c.id === id);
+        if (updated && typeof updated.progress === 'number') {
+          // Optionally, update local state or context with new progress
+          // (If you have a candidate context or state, update it here)
+          // For now, just log for verification
+          console.log('Updated candidate progress:', updated.progress);
+        }
+      } catch (e) {
+        // Ignore errors, fallback to existing UI
+      }
       if (newStatus === 'completed') {
         try {
           await apiService.sendStepCompletionEmail(String(id), stepId);
@@ -261,25 +293,27 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setSteps(initialSteps);
   }, []);
 
-  const simulateStepCompletion = useCallback((stepId: string) => {
+  const simulateStepCompletion = useCallback(async (stepId: string) => {
     updateStepStatus(stepId, 'completed');
     // Add realistic activity
     const stepTitle = steps.find(s => s.id === stepId)?.title || 'Step';
-    addNotification({
+    const notification: Omit<Notification, 'id' | 'timestamp' | 'read'> = {
       type: 'success',
       title: 'Step Completed',
       message: `${stepTitle} has been completed successfully.`,
-    });
+    };
+    await addNotification(notification);
   }, [steps, updateStepStatus, addNotification]);
 
-  const simulateDocumentUpload = useCallback(() => {
+  const simulateDocumentUpload = useCallback(async () => {
     const randomDoc = mockDocumentNames[Math.floor(Math.random() * mockDocumentNames.length)];
     const mockDoc = generateMockDocument(randomDoc);
-    addNotification({
+    const notification: Omit<Notification, 'id' | 'timestamp' | 'read'> = {
       type: 'success',
       title: 'Document Uploaded',
       message: `${mockDoc.name} has been uploaded and processed successfully.`,
-    });
+    };
+    await addNotification(notification);
   }, [addNotification]);
 
   const completedSteps = steps.filter(step => step.status === 'completed').length;

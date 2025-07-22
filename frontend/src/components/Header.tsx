@@ -24,7 +24,7 @@ const Header: React.FC = () => {
   const navigation = [
     { name: 'Dashboard', href: user?.role === 'hr' ? '/hr-dashboard' : '/dashboard', icon: Home },
     { name: 'Onboarding', href: '/onboarding', icon: FileText },
-    { name: 'Gamification', href: '/gamification', icon: Award },
+    // { name: 'Gamification', href: '/gamification', icon: Award },
   ];
 
   return (
@@ -37,7 +37,7 @@ const Header: React.FC = () => {
               <div className="bg-green-900 rounded-lg inline-flex items-center justify-center px-3 py-1">
                 <span className="text-white font-bold text-sm">Lloyds Technology Centre</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">Onboarding AI</span>
+              <span className="text-xl font-bold text-gray-900">Onboarding</span>
             </Link>
           </div>
 

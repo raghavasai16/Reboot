@@ -84,6 +84,12 @@ const HRDashboardPage: React.FC = () => {
   const loadCandidates = async () => {
     try {
       const backendCandidates = await fetchCandidates();
+      // Sort by lastActivity (or createdAt if available) descending
+      backendCandidates.sort((a: any, b: any) => {
+        const aDate = a.lastActivity ? new Date(a.lastActivity) : new Date(0);
+        const bDate = b.lastActivity ? new Date(b.lastActivity) : new Date(0);
+        return bDate.getTime() - aDate.getTime();
+      });
       setCandidates(
         backendCandidates.map((c: any) => ({
           id: c.id,
@@ -249,20 +255,19 @@ const HRDashboardPage: React.FC = () => {
     setRecentActivities(prev => [{ ...activity, id: Date.now() }, ...prev.slice(0, 9)]);
   };
 
-  // Compute department completion and active rates from backend data
+  // Compute department completion rates from backend data
   const departmentStats = React.useMemo(() => {
-    const stats: Record<string, { total: number; completed: number; active: number }> = {};
+    const stats: Record<string, { total: number; completed: number }> = {};
     candidates.forEach(c => {
       const dept = c.department || 'Other';
-      if (!stats[dept]) stats[dept] = { total: 0, completed: 0, active: 0 };
+      if (!stats[dept]) stats[dept] = { total: 0, completed: 0 };
       stats[dept].total += 1;
       if (c.status?.toLowerCase() === 'completed') stats[dept].completed += 1;
-      if (c.status?.toLowerCase() === 'in progress') stats[dept].active += 1;
     });
-    return Object.entries(stats).map(([department, { total, completed, active }]) => ({
+    return Object.entries(stats).map(([department, { total, completed }]) => ({
       department,
-      completedRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-      activeRate: total > 0 ? Math.round((active / total) * 100) : 0,
+      total,
+      completed
     }));
   }, [candidates]);
 
@@ -714,18 +719,25 @@ const HRDashboardPage: React.FC = () => {
     <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Onboarding Completion Rate</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-4">Onboarding Completion Rate</h3>
           <div className="space-y-4">
-            {departmentStats.map(({ department, completedRate, activeRate }) => (
-              <div key={department} className="mb-2">
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="text-gray-600">{department}</span>
-                  <span className="text-gray-900">{completedRate}% Completed / {activeRate}% Active</span>
+            {departmentStats.map(({ department, completed, total }) => {
+              const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+              return (
+                <div key={department}>
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-medium text-gray-800">{department}</span>
+                    <span className="font-semibold text-blue-700">{completed}/{total} Completed</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div
+                      className="h-3 rounded-full bg-blue-500 transition-all duration-300"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
                 </div>
-                <ProgressBar progress={completedRate} className="bg-green-500" />
-                <ProgressBar progress={activeRate} className="bg-blue-500 mt-1" />
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
 
