@@ -1,4 +1,5 @@
 const API_BASE_URL = 'http://localhost:8080/api';
+const NOTIFICATION_API_BASE_URL = 'http://localhost:8081/api';
 
 export interface CandidateRequest {
   firstName: string;
@@ -225,7 +226,7 @@ export const updateOnboardingStepById = async (candidateId: number, stepId: stri
 
 // Notification API integration
 export const fetchNotifications = async (userEmail: string) => {
-  const response = await fetch(`${API_BASE_URL}/notifications/${encodeURIComponent(userEmail)}`);
+  const response = await fetch(`${NOTIFICATION_API_BASE_URL}/notifications/${encodeURIComponent(userEmail)}`);
   if (!response.ok) throw new Error('Failed to fetch notifications');
   return response.json();
 };
@@ -236,7 +237,7 @@ export const createNotification = async (notification: {
   title: string;
   message: string;
 }) => {
-  const response = await fetch(`${API_BASE_URL}/notifications`, {
+  const response = await fetch(`${NOTIFICATION_API_BASE_URL}/notifications`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(notification),
@@ -246,7 +247,7 @@ export const createNotification = async (notification: {
 };
 
 export const markNotificationAsRead = async (id: string | number) => {
-  const response = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+  const response = await fetch(`${NOTIFICATION_API_BASE_URL}/notifications/${id}/read`, {
     method: 'PATCH',
   });
   if (!response.ok) throw new Error('Failed to mark notification as read');

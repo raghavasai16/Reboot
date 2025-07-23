@@ -67,7 +67,7 @@ const BGVVerification: React.FC<BGVVerificationProps> = ({ onComplete, isProcess
 
   // New: Fetch all checks as completed (demo)
   const fetchAllChecksCompleted = async () => {
-    const res = await fetch('http://localhost:8080/api/bgv/checks');
+    const res = await fetch('http://localhost:8082/api/bgv/checks');
     if (res.ok) {
       const checks = await res.json();
       setBgvData(prev => ({

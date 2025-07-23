@@ -3,6 +3,9 @@ package OnBoard_HR.AI.HR.controller;
 import OnBoard_HR.AI.HR.dto.CandidateRequest;
 import OnBoard_HR.AI.HR.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
@@ -17,6 +20,7 @@ import OnBoard_HR.AI.HR.entity.OnboardingStep;
 import OnBoard_HR.AI.HR.repository.OnboardingStepRepository;
 import OnBoard_HR.AI.HR.entity.Candidate;
 import OnBoard_HR.AI.HR.repository.CandidateRepository;
+import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/api/candidates")
@@ -36,6 +40,9 @@ public class CandidateController {
 
     @Autowired
     private CandidateRepository candidateRepository;
+
+    @Autowired
+    RestTemplate restTemplate;
 
     @PostMapping("/add")
     public ResponseEntity<Map<String, Object>> addCandidate(@RequestBody CandidateRequest request) {
@@ -71,17 +78,42 @@ public class CandidateController {
             try {
                 if (request.getPosition() != null && request.getDepartment() != null) {
                     logger.info("Sending email with details for: {} ({} - {})", candidateName, request.getPosition(), request.getDepartment());
-                    emailService.sendOnboardingEmailWithDetails(
-                        request.getEmail(), 
-                        candidateName, 
-                        request.getPosition(), 
-                        request.getDepartment()
+                    String url = "http://localhost:8081/api/notifications/send/onboarding/detailed/{email}/{name}/{position}/{department}";
+                    Map<String, String> uriParams = Map.of("email", request.getEmail(),
+                            "name", candidateName, "position", request.getPosition(), "department", request.getDepartment());
+                    HttpHeaders headers = new HttpHeaders();
+                    HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+                    ResponseEntity<String> responseEntity = restTemplate.exchange(
+                            url,
+                            HttpMethod.POST,
+                            httpEntity,
+                            String.class,
+                            uriParams
                     );
+//                    emailService.sendOnboardingEmailWithDetails(
+//                        request.getEmail(),
+//                        candidateName,
+//                        request.getPosition(),
+//                        request.getDepartment()
+//                    );
                 } else {
                     logger.info("Sending basic email for: {}", candidateName);
-                    emailService.sendOnboardingEmail(request.getEmail(), candidateName);
+                    String url = "http://localhost:8081/api/notifications/send/onboarding/{email}/{name}";
+                    Map<String, String> uriParams = Map.of("email", request.getEmail(), "name", candidateName);
+                    HttpHeaders headers = new HttpHeaders();
+                    HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+                    ResponseEntity<String> responseEntity = restTemplate.exchange(
+                            url,
+                            HttpMethod.POST,
+                            httpEntity,
+                            String.class,
+                            uriParams
+                    );
+//                    emailService.sendOnboardingEmail(, candidateName);
                 }
-            } catch (MessagingException e) {
+            } catch (Exception e) {
                 logger.error("Email sending failed for: {} with email: {}", candidateName, request.getEmail(), e);
                 response.put("success", false);
                 response.put("message", "Failed to send email: " + e.getMessage());

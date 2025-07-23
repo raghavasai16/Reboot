@@ -6,9 +6,8 @@ import OnBoard_HR.AI.HR.dto.CandidateRequest;
 import OnBoard_HR.AI.HR.dto.StepCompletionRequest;
 import OnBoard_HR.AI.HR.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.HttpStatus;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,6 +18,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import OnBoard_HR.AI.HR.entity.Candidate;
 import OnBoard_HR.AI.HR.repository.CandidateRepository;
+import org.springframework.web.client.RestTemplate;
 
 @RestController
 @RequestMapping("/api/onboarding")
@@ -35,6 +35,9 @@ public class OnboardingController {
 
     @Autowired
     private CandidateRepository candidateRepository;
+
+    @Autowired
+    RestTemplate restTemplate;
 
     // Get all onboarding steps for a candidate
     @GetMapping("/{candidateEmail}")
@@ -238,7 +241,19 @@ public class OnboardingController {
                     return new ResponseEntity<>("Failed to send step completion email: candidate not found.", HttpStatus.BAD_REQUEST);
                 }
             }
-            emailService.sendStepCompletionEmail(email, step);
+            String url = "http://localhost:8081/api/notifications/send/step-completion/{email}/{step}";
+            Map<String, String> uriParams = Map.of("email", email, "step", step);
+            HttpHeaders headers = new HttpHeaders();
+            HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+
+            ResponseEntity<String> responseEntity = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    httpEntity,
+                    String.class,
+                    uriParams
+            );
+//            emailService.sendStepCompletionEmail(email, step);
             return new ResponseEntity<>("Step completion email sent successfully.", HttpStatus.OK);
         } catch (Exception e) {
             return new ResponseEntity<>("Failed to send step completion email.", HttpStatus.INTERNAL_SERVER_ERROR);
