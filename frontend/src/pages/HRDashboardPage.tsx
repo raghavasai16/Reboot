@@ -37,6 +37,7 @@ import {
 import Button from '../components/Button';
 import Card from '../components/Card';
 import ProgressBar from '../components/ProgressBar';
+import { readSelectedTextOr, stopReading } from '../utils/immersiveReader';
 
 const HRDashboardPage: React.FC = () => {
   const { user } = useAuth();
@@ -843,7 +844,25 @@ const HRDashboardPage: React.FC = () => {
               <p className="text-gray-600">
                 Manage and monitor candidate onboarding progress
               </p>
-              <div className="flex items-center mt-2">
+              <div className="flex items-center mt-2 mb-4">
+                <button
+                  type="button"
+                  onClick={() => readSelectedTextOr('HR Dashboard. Manage and monitor candidate onboarding progress. Use the tabs below to view overview, candidates, analytics, and reports.')}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  aria-label="Read this page aloud"
+                >
+                  🔊 Read Aloud
+                </button>
+                <button
+                  type="button"
+                  onClick={stopReading}
+                  className="ml-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+                  aria-label="Stop reading aloud"
+                >
+                  ⏹ Stop
+                </button>
+              </div>
+              <div className="flex items-center">
                 <div className={`w-2 h-2 rounded-full mr-2 ${
                   backendStatus === 'connected' ? 'bg-green-500' : 
                   backendStatus === 'disconnected' ? 'bg-red-500' : 'bg-yellow-500'

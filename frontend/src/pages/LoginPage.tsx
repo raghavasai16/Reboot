@@ -4,6 +4,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Button from '../components/Button';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../contexts/NotificationContext';
+import { readSelectedTextOr, stopReading } from '../utils/immersiveReader';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');

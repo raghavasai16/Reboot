@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../contexts/OnboardingContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { generateMockDocument, mockDocumentNames } from '../utils/mockData';
+import { readSelectedTextOr, stopReading } from '../utils/immersiveReader';
 import { 
   User, 
   CheckCircle, 
@@ -140,6 +141,25 @@ const DashboardPage: React.FC = () => {
                 </Button>
               </Link>
             </div>
+          </div>
+          <div className="flex items-center mb-4">
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            <button
+              type="button"
+              onClick={() => readSelectedTextOr('Dashboard. Welcome to your dashboard. Here you can view your onboarding progress, notifications, and important updates.')}
+              className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label="Read this page aloud"
+            >
+              🔊 Read Aloud
+            </button>
+            <button
+              type="button"
+              onClick={stopReading}
+              className="ml-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label="Stop reading aloud"
+            >
+              ⏹ Stop
+            </button>
           </div>
         </div>
 

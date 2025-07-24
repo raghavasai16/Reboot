@@ -2,10 +2,14 @@ import React, { useState, useCallback, useRef } from 'react';
 import { Upload, FileText, Eye, CheckCircle, AlertCircle, Loader2, X, AlertTriangle } from 'lucide-react';
 import Button from './Button';
 import Card from './Card';
+import { playSuccess, playError } from '../utils/audioFeedback';
+import { readSelectedTextOr, stopReading } from '../utils/immersiveReader';
+import { uploadDocumentToBackend } from '../utils/api';
 
 interface DocumentUploadProps {
   onComplete: (data: any) => void;
   isProcessing: boolean;
+  candidateId: number; // <-- Add this
 }
 
 interface UploadedDocument {
@@ -16,9 +20,10 @@ interface UploadedDocument {
   status: 'uploading' | 'processing' | 'completed' | 'error';
   extractedData?: any;
   confidence?: number;
+  backendId?: string; // Added for backend document ID
 }
 
-const DocumentUpload: React.FC<DocumentUploadProps> = ({ onComplete, isProcessing }) => {
+const DocumentUpload: React.FC<DocumentUploadProps> = ({ onComplete, isProcessing, candidateId }) => {
   const [documents, setDocuments] = useState<UploadedDocument[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isFresher, setIsFresher] = useState(false);
@@ -59,6 +64,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onComplete, isProcessin
   }, []);
 
   const processRealFiles = async (files: File[]) => {
+    if (!candidateId || isNaN(Number(candidateId))) {
+      setDocuments(prev => prev.map(d => ({ ...d, status: 'error' })));
+      playError();
+      alert('Error: candidateId is missing or invalid. Please log in again or contact support.');
+      console.error('Document upload blocked: candidateId is missing or invalid:', candidateId);
+      return;
+    }
     const newDocuments = files.map(file => ({
       id: Date.now().toString() + Math.random(),
       name: file.name,
@@ -69,32 +81,36 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onComplete, isProcessin
 
     setDocuments(prev => [...prev, ...newDocuments]);
 
-    // Process each file
     for (const doc of newDocuments) {
-      // Simulate upload
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setDocuments(prev => prev.map(d => 
-        d.id === doc.id ? { ...d, status: 'processing' } : d
-      ));
-
-      // Simulate OCR processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Mock extracted data based on file name
-      const extractedData = generateExtractedData(doc.name);
-
-      setDocuments(prev => prev.map(d => 
-        d.id === doc.id ? { 
-          ...d, 
-          status: 'completed',
-          extractedData,
-          confidence: Math.floor(Math.random() * 20) + 80
-        } : d
-      ));
-
-      // Update mandatory document status
-      updateMandatoryStatus(doc.name);
+      try {
+        setDocuments(prev => prev.map(d => d.id === doc.id ? { ...d, status: 'processing' } : d));
+        const response = await uploadDocumentToBackend(
+          files.find(f => f.name === doc.name)!,
+          candidateId
+        );
+        const extractedData = generateExtractedData(doc.name);
+        setDocuments(prev => prev.map(d => 
+          d.id === doc.id
+            ? {
+                ...d,
+                status: 'completed',
+                backendId: response.id,
+                gcsUrl: response.gcsUrl,
+                fileName: response.fileName,
+                fileType: response.fileType,
+                fileSize: response.fileSize,
+                uploadTime: response.uploadTime,
+                extractedData,
+              }
+            : d
+        ));
+        updateMandatoryStatus(doc.name);
+      } catch (error) {
+        setDocuments(prev => prev.map(d =>
+          d.id === doc.id ? { ...d, status: 'error' } : d
+        ));
+        playError();
+      }
     }
   };
 
@@ -216,6 +232,22 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onComplete, isProcessin
         <p className="text-gray-600">
           Upload your documents for AI-powered extraction and verification
         </p>
+        <button
+          type="button"
+          onClick={() => readSelectedTextOr('Document Upload and OCR Processing. Upload your documents for AI-powered extraction and verification. Mandatory Documents. Upload Area. Uploaded Documents.')}
+          className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400"
+          aria-label="Read this section aloud"
+        >
+          🔊 Read Aloud
+        </button>
+        <button
+          type="button"
+          onClick={stopReading}
+          className="ml-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-green-400"
+          aria-label="Stop reading aloud"
+        >
+          ⏹ Stop
+        </button>
       </div>
 
       {/* Mandatory Documents Info */}
@@ -223,12 +255,15 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onComplete, isProcessin
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Mandatory Documents</h3>
         
         <div className="mb-4">
-          <label className="flex items-center space-x-2">
+          <label htmlFor="isFresher" className="flex items-center space-x-2">
             <input
+              id="isFresher"
               type="checkbox"
               checked={isFresher}
               onChange={(e) => setIsFresher(e.target.checked)}
               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              aria-checked={isFresher}
+              aria-label="I am a fresher (no previous work experience)"
             />
             <span className="text-sm text-gray-700">I am a fresher (no previous work experience)</span>
           </label>
@@ -344,31 +379,22 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onComplete, isProcessin
               <div key={doc.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center space-x-3">
-                    <div className={`${getStatusColor(doc.status)}`}>
-                      {getStatusIcon(doc.status)}
-                    </div>
+                    <div className={`${getStatusColor(doc.status)}`}> {getStatusIcon(doc.status)} </div>
                     <div>
                       <p className="font-medium text-gray-900">{doc.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {formatFileSize(doc.size)} • {doc.status}
-                      </p>
+                      <p className="text-sm text-gray-500">{formatFileSize(doc.size)} • {doc.status}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {doc.confidence && (
-                      <span className="text-sm text-gray-600">
-                        {doc.confidence}% confidence
-                      </span>
+                      <span className="text-sm text-gray-600">{doc.confidence}% confidence</span>
                     )}
-                    <button
-                      onClick={() => removeDocument(doc.id)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
+                    <button onClick={() => removeDocument(doc.id)} className="text-gray-400 hover:text-gray-600">
                       <X className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
-
+                {/* Show extracted data as a form for each document type if present */}
                 {doc.extractedData && (
                   <div className="mt-3 p-3 bg-gray-50 rounded-lg">
                     <h4 className="text-sm font-medium text-gray-900 mb-2">
@@ -529,9 +555,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ onComplete, isProcessin
       {/* Action Buttons */}
       <div className="flex justify-end">
         <Button
-          onClick={() => onComplete({ documents })}
+          onClick={() => {
+            onComplete({ documents });
+            playSuccess();
+          }}
           disabled={!allDocumentsProcessed || isProcessing}
           className="px-8"
+          aria-label="Complete Document Upload"
         >
           {isProcessing ? (
             <>

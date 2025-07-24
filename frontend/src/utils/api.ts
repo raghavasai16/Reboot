@@ -18,6 +18,20 @@ export interface ApiResponse {
   department?: string;
 }
 
+export interface DocumentUploadResponse {
+  id: number;
+  originalFileName: string;
+  contentType: string;
+  fileSize: number;
+  documentType: string;
+  status: string;
+  errorMessage?: string;
+  downloadUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  extractedFields?: any[];
+}
+
 // Helper function to create fetch with timeout
 const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 10000) => {
   const controller = new AbortController();
@@ -252,3 +266,35 @@ export const markNotificationAsRead = async (id: string | number) => {
   if (!response.ok) throw new Error('Failed to mark notification as read');
   return response.json();
 }; 
+
+export async function uploadDocumentToOCR(file: File, documentType?: string): Promise<DocumentUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (documentType) formData.append('documentType', documentType);
+
+  const response = await fetch('http://localhost:5000/api/documents/upload', {
+    method: 'POST',
+    body: formData,
+    // Add credentials or auth headers if needed
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+    throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+  }
+  return response.json();
+} 
+
+export async function uploadDocumentToBackend(file: File, candidateId: number) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('candidateId', candidateId.toString());
+
+  const response = await fetch('http://localhost:8080/api/documents/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!response.ok) {
+    throw new Error('Failed to upload document');
+  }
+  return response.json();
+} 

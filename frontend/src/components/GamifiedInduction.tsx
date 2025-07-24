@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Award, Trophy, Star, Users, CheckCircle, Gift, PartyPopper } from 'lucide-react';
 import Button from './Button';
 import Card from './Card';
+import { readSelectedTextOr, stopReading } from '../utils/immersiveReader';
 
 const courses = [
   {
@@ -57,6 +58,22 @@ const GamifiedInduction: React.FC<{ onComplete?: () => void; isProcessing?: bool
           <div>
             <h2 className="text-3xl font-bold text-indigo-800 mb-2">Welcome to the Onboarding Challenge!</h2>
             <p className="text-gray-700">Earn points, unlock badges, and climb the leaderboard as you complete your onboarding journey.</p>
+            <button
+              type="button"
+              onClick={() => readSelectedTextOr('Welcome to the Onboarding Challenge! Earn points, unlock badges, and climb the leaderboard as you complete your onboarding journey. Induction Courses. Your Progress. Your Badges. Leaderboard.')}
+              className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              aria-label="Read this section aloud"
+            >
+              🔊 Read Aloud
+            </button>
+            <button
+              type="button"
+              onClick={stopReading}
+              className="ml-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              aria-label="Stop reading aloud"
+            >
+              ⏹ Stop
+            </button>
           </div>
           <Award className="w-16 h-16 text-indigo-400" />
         </Card>

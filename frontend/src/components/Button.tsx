@@ -14,6 +14,16 @@ const Button: React.FC<ButtonProps> = ({
   children,
   ...props
 }) => {
+  // Accessibility: Warn if button has no accessible name
+  if (typeof window !== 'undefined' && (window as any).process?.env?.NODE_ENV === 'development') {
+    if (
+      (typeof children !== 'string' || !children.trim()) &&
+      !props['aria-label']
+    ) {
+      // eslint-disable-next-line no-console
+      console.warn('Button should have an accessible name (text or aria-label)');
+    }
+  }
   const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variants = {

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Brain, Sparkles, CheckCircle, Loader2 } from 'lucide-react';
 import Button from './Button';
 import Card from './Card';
+import { playSuccess, playError } from '../utils/audioFeedback';
+import { readSelectedTextOr, stopReading } from '../utils/immersiveReader';
 
 interface AdaptiveFormProps {
   onComplete: (data: any) => void;
@@ -83,6 +85,22 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
         <p className="text-gray-600">
           Our AI assists you in completing forms with real-time validation and suggestions
         </p>
+        <button
+          type="button"
+          onClick={() => readSelectedTextOr('Adaptive Forms with AI Validation. Our AI assists you in completing forms with real-time validation and suggestions. Personal Information. First Name. Last Name. Email Address. Phone Number. Address. Skills and Expertise. Work Experience. Emergency Contact.')}
+          className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          aria-label="Read this form aloud"
+        >
+          🔊 Read Aloud
+        </button>
+        <button
+          type="button"
+          onClick={stopReading}
+          className="ml-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          aria-label="Stop reading aloud"
+        >
+          ⏹ Stop
+        </button>
       </div>
 
       <Card className="p-6">
@@ -99,14 +117,17 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* First Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
               First Name
             </label>
             <div className="relative">
               <input
+                id="firstName"
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
+                aria-required="true"
+                aria-label="First Name"
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                   validationScores.firstName
                     ? getValidationBg(validationScores.firstName)
@@ -127,14 +148,17 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
 
           {/* Last Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
               Last Name
             </label>
             <div className="relative">
               <input
+                id="lastName"
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
+                aria-required="true"
+                aria-label="Last Name"
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                   validationScores.lastName
                     ? getValidationBg(validationScores.lastName)
@@ -155,14 +179,17 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
 
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
             </label>
             <div className="relative">
               <input
+                id="email"
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
+                aria-required="true"
+                aria-label="Email Address"
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                   validationScores.email
                     ? getValidationBg(validationScores.email)
@@ -183,14 +210,17 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
 
           {/* Phone */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
               Phone Number
             </label>
             <div className="relative">
               <input
+                id="phone"
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
+                aria-required="true"
+                aria-label="Phone Number"
                 className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
                   validationScores.phone
                     ? getValidationBg(validationScores.phone)
@@ -212,12 +242,15 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
 
         {/* Address */}
         <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
             Address
           </label>
           <textarea
+            id="address"
             value={formData.address}
             onChange={(e) => handleInputChange('address', e.target.value)}
+            aria-label="Address"
+            aria-required="true"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             rows={3}
             placeholder="Enter your complete address"
@@ -235,12 +268,14 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
 
         {/* Skills */}
         <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-2">
             Skills & Expertise
           </label>
           <textarea
+            id="skills"
             value={formData.skills}
             onChange={(e) => handleInputChange('skills', e.target.value)}
+            aria-label="Skills and Expertise"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             rows={3}
             placeholder="List your key skills and areas of expertise"
@@ -258,12 +293,14 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
 
         {/* Experience */}
         <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-2">
             Work Experience
           </label>
           <textarea
+            id="experience"
             value={formData.experience}
             onChange={(e) => handleInputChange('experience', e.target.value)}
+            aria-label="Work Experience"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             rows={4}
             placeholder="Describe your relevant work experience"
@@ -281,13 +318,15 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
 
         {/* Emergency Contact */}
         <div className="mt-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="emergencyContact" className="block text-sm font-medium text-gray-700 mb-2">
             Emergency Contact
           </label>
           <input
+            id="emergencyContact"
             type="text"
             value={formData.emergencyContact}
             onChange={(e) => handleInputChange('emergencyContact', e.target.value)}
+            aria-label="Emergency Contact"
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="Name and phone number of emergency contact"
           />
@@ -295,9 +334,13 @@ const AdaptiveForm: React.FC<AdaptiveFormProps> = ({ onComplete, isProcessing })
 
         <div className="mt-8 flex justify-end">
           <Button
-            onClick={() => onComplete(formData)}
+            onClick={() => {
+              onComplete(formData);
+              playSuccess();
+            }}
             disabled={!isFormValid || isProcessing}
             className="px-8"
+            aria-label="Complete Form"
           >
             {isProcessing ? (
               <>

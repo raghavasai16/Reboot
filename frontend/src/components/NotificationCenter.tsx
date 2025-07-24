@@ -3,6 +3,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { Bell, X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import Button from './Button';
 import Card from './Card';
+import { playNotification } from '../utils/audioFeedback';
 
 const NotificationCenter: React.FC = () => {
   const { notifications, markAsRead, clearNotifications } = useNotifications();
@@ -25,8 +26,14 @@ const NotificationCenter: React.FC = () => {
     <>
       {/* Notification Bell */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          setIsOpen(!isOpen);
+          if (!isOpen) playNotification();
+        }}
         className="fixed top-4 right-4 p-2 bg-white rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 transition-colors z-50"
+        aria-label="Open notifications"
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         <Bell className="w-5 h-5 text-gray-600" />
         {notifications.filter(n => !n.read).length > 0 && (
@@ -38,7 +45,7 @@ const NotificationCenter: React.FC = () => {
 
       {/* Notification Panel */}
       {isOpen && (
-        <div className="fixed top-16 right-4 w-80 max-h-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+        <div className="fixed top-16 right-4 w-80 max-h-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden" role="alert" aria-live="polite">
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
             <div className="flex items-center space-x-2">
@@ -47,12 +54,14 @@ const NotificationCenter: React.FC = () => {
                 size="sm"
                 onClick={clearNotifications}
                 className="text-gray-500 hover:text-gray-700"
+                aria-label="Clear all notifications"
               >
                 Clear All
               </Button>
               <button
                 onClick={() => setIsOpen(false)}
                 className="text-gray-400 hover:text-gray-600"
+                aria-label="Close notifications panel"
               >
                 <X className="w-5 h-5" />
               </button>

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Brain, AlertTriangle, CheckCircle, Eye, Loader2 } from 'lucide-react';
 import Button from './Button';
 import Card from './Card';
+import { playSuccess, playError, playNotification } from '../utils/audioFeedback';
+import { readSelectedTextOr, stopReading } from '../utils/immersiveReader';
 
 interface AIValidationProps {
   onComplete: (data: any) => void;
@@ -131,6 +133,22 @@ const AIValidation: React.FC<AIValidationProps> = ({ onComplete, isProcessing })
         <p className="text-gray-600">
           Our AI compares form data with document information to detect discrepancies
         </p>
+        <button
+          type="button"
+          onClick={() => readSelectedTextOr('AI Cross-Validation. Our AI compares form data with document information to detect discrepancies. Validation Score. Field-by-Field Validation.')}
+          className="mt-2 px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400"
+          aria-label="Read this section aloud"
+        >
+          🔊 Read Aloud
+        </button>
+        <button
+          type="button"
+          onClick={stopReading}
+          className="ml-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-400"
+          aria-label="Stop reading aloud"
+        >
+          ⏹ Stop
+        </button>
       </div>
 
       {/* Overall Score */}
@@ -212,7 +230,7 @@ const AIValidation: React.FC<AIValidationProps> = ({ onComplete, isProcessing })
       {!isAnalyzing && (
         <div className="flex justify-between">
           {hasIssues && (
-            <Button variant="outline" className="text-red-600 border-red-300 hover:bg-red-50">
+            <Button variant="outline" className="text-red-600 border-red-300 hover:bg-red-50" aria-label="Report Discrepancy">
               <AlertTriangle className="w-4 h-4 mr-2" />
               Report Discrepancy
             </Button>
@@ -221,14 +239,26 @@ const AIValidation: React.FC<AIValidationProps> = ({ onComplete, isProcessing })
           <div className="flex space-x-3 ml-auto">
             <Button
               variant="outline"
-              onClick={() => onComplete({ validationResults, overallScore, requiresReview: hasIssues })}
+              onClick={() => {
+                onComplete({ validationResults, overallScore, requiresReview: hasIssues });
+                playNotification();
+              }}
               disabled={isProcessing}
+              aria-label="Review Later"
             >
               Review Later
             </Button>
             <Button
-              onClick={() => onComplete({ validationResults, overallScore, requiresReview: hasIssues })}
+              onClick={() => {
+                onComplete({ validationResults, overallScore, requiresReview: hasIssues });
+                if (hasIssues) {
+                  playError();
+                } else {
+                  playSuccess();
+                }
+              }}
               disabled={isProcessing}
+              aria-label="Complete Validation"
             >
               {isProcessing ? (
                 <>

@@ -14,6 +14,7 @@ import {
   Award
 } from 'lucide-react';
 import Button from './Button';
+import { playNotification } from '../utils/audioFeedback';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -42,7 +43,7 @@ const Header: React.FC = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center space-x-6" role="navigation" aria-label="Main Navigation">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -72,8 +73,14 @@ const Header: React.FC = () => {
             {/* User Profile */}
             <div className="relative">
               <button
-                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                onClick={() => {
+                  setIsProfileOpen(!isProfileOpen);
+                  playNotification();
+                }}
                 className="flex items-center space-x-3 text-gray-700 hover:text-gray-900 transition-colors"
+                aria-label="Open user profile menu"
+                aria-haspopup="true"
+                aria-expanded={isProfileOpen}
               >
                 <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                   <User className="w-5 h-5" />
@@ -104,8 +111,14 @@ const Header: React.FC = () => {
 
             {/* Mobile Menu Button */}
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={() => {
+                setIsMenuOpen(!isMenuOpen);
+                playNotification();
+              }}
               className="md:hidden p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label={isMenuOpen ? 'Close mobile menu' : 'Open mobile menu'}
+              aria-haspopup="true"
+              aria-expanded={isMenuOpen}
             >
               {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>

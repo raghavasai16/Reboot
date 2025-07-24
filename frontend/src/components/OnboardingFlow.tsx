@@ -25,6 +25,7 @@ import OfferGeneration from './OfferGeneration';
 import BGVVerification from './BGVVerification';
 import SmartForms from './SmartForms';
 import GamifiedInduction from './GamifiedInduction';
+import { readSelectedTextOr, stopReading } from '../utils/immersiveReader';
 
 declare global {
   interface Window {
@@ -96,10 +97,35 @@ const OnboardingFlow: React.FC = () => {
           />
         );
       case 'documents':
+        // Determine candidateId for upload
+        let candidateId = user?.role === 'candidate'
+          ? user?.id
+          : (window.selectedCandidate?.id ?? undefined);
+        // Fallback: Try to get from localStorage/sessionStorage if still undefined
+        if (!candidateId) {
+          const stored = localStorage.getItem('selectedCandidate') || sessionStorage.getItem('selectedCandidate');
+          if (stored) {
+            try {
+              const parsed = JSON.parse(stored);
+              if (parsed && parsed.id) candidateId = parsed.id;
+            } catch (e) {
+              // ignore parse error
+            }
+          }
+        }
+        // Fallback: try selectedCandidateId as a plain value
+        if (!candidateId) {
+          const idStr = localStorage.getItem('selectedCandidateId') || sessionStorage.getItem('selectedCandidateId');
+          if (idStr && !isNaN(Number(idStr))) {
+            candidateId = Number(idStr);
+          }
+        }
+        console.log('Resolved candidateId for DocumentUpload:', candidateId);
         return (
           <DocumentUpload
             onComplete={(data) => handleStepComplete('documents', data)}
             isProcessing={isProcessing}
+            candidateId={candidateId}
           />
         );
       case 'verification':
@@ -211,6 +237,22 @@ const OnboardingFlow: React.FC = () => {
           <p className="text-gray-600">
             Complete your onboarding process with AI-powered assistance
           </p>
+          <button
+            type="button"
+            onClick={() => readSelectedTextOr('Onboarding Journey. Complete your onboarding process with AI-powered assistance. Steps. Progress Overview. Step Navigation.')}
+            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            aria-label="Read this section aloud"
+          >
+            🔊 Read Aloud
+          </button>
+          <button
+            type="button"
+            onClick={stopReading}
+            className="ml-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg shadow hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            aria-label="Stop reading aloud"
+          >
+            ⏹ Stop
+          </button>
         </div>
 
         {/* Progress Overview */}
