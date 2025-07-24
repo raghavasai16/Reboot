@@ -1,0 +1,4 @@
+runtime: java17
+env: flex
+vpc_access_connector:
+  name: projects/ltc-reboot25-team-47/locations/asia-south1/connectors/test
